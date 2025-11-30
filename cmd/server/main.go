@@ -1,7 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/beavercli/beaver_api/internal/router"
+)
 
 func main() {
-	fmt.Println("hello")
+	srv := router.New()
+	if err := srv.ListenAndServe(); err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
 }
