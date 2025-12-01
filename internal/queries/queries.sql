@@ -46,29 +46,29 @@ SELECT id FROM contributors WHERE email=$1;
 -- name: DeleteContributorsExcept :exec
 DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::UUID[]));
 
--- Scripts
+-- Snippets
 
--- name: UpsertScript :exec
-INSERT INTO scripts (title, code, project_url, language_id, created_at) VALUES($1, $2, $3, $4, $5)
+-- name: UpsertSnippet :exec
+INSERT INTO snippets (title, code, project_url, language_id, created_at) VALUES($1, $2, $3, $4, $5)
 ON CONFLICT (title) DO UPDATE SET created_at = EXCLUDED.created_at;
 
--- name: GetScriptIDByTitle :one
-SELECT id FROM scripts WHERE title=$1;
+-- name: GetSnippetIDByTitle :one
+SELECT id FROM snippets WHERE title=$1;
 
 -- name: ListUsedLanguageIDs :many
-SELECT DISTINCT(language_id) FROM scripts;
+SELECT DISTINCT(language_id) FROM snippets;
 
--- name: DeleteScriptsBefore :exec
-DELETE FROM scripts WHERE created_at < $1;
+-- name: DeleteSnippetsBefore :exec
+DELETE FROM snippets WHERE created_at < $1;
 
--- name: LinkScriptTag :exec
-INSERT INTO script_tags (script_id, tag_id) VALUES($1, $2) ON CONFLICT (script_id, tag_id) DO NOTHING;
+-- name: LinkSnippetTag :exec
+INSERT INTO snippet_tags (snippet_id, tag_id) VALUES($1, $2) ON CONFLICT (snippet_id, tag_id) DO NOTHING;
 
 -- name: ListLinkedTagIDs :many
-SELECT DISTINCT(tag_id) FROM script_tags;
+SELECT DISTINCT(tag_id) FROM snippet_tags;
 
--- name: LinkScriptContributor :exec
-INSERT INTO script_contributors (script_id, contributor_id) VALUES($1, $2) ON CONFLICT (script_id, contributor_id) DO NOTHING;
+-- name: LinkSnippetContributor :exec
+INSERT INTO snippet_contributors (snippet_id, contributor_id) VALUES($1, $2) ON CONFLICT (snippet_id, contributor_id) DO NOTHING;
 
 -- name: ListLinkedContributorIDs :many
-SELECT DISTINCT(contributor_id) FROM script_contributors;
+SELECT DISTINCT(contributor_id) FROM snippet_contributors;
