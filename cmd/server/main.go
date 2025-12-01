@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "github.com/beavercli/beaver_api/docs"
@@ -22,8 +27,22 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	})
 
-	if err := srv.ListenAndServe(); err != nil {
-		fmt.Println(err)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Println(err)
+			panic(err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
 		panic(err)
 	}
+	fmt.Println("Server stopped")
 }
