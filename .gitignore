@@ -33,3 +33,4 @@ go.work.sum
 .old/
 .DS_Store
 /bin
+/docs
