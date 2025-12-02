@@ -32,3 +32,4 @@ go.work.sum
 # .vscode/
 .old/
 .DS_Store
+/bin
