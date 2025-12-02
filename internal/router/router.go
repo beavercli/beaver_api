@@ -10,7 +10,6 @@ import (
 
 type Config struct {
 	Addr         string
-	Port         int
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 }
@@ -31,8 +30,13 @@ func New(cfg Config) *http.Server {
 	mux.HandleFunc("GET /api/v1/tags", s.handleListTags)
 	mux.HandleFunc("GET /api/v1/languages", s.handleListLanguages)
 
+	mux.HandleFunc("GET /auth/github/login", s.handleGithubLogin)
+	mux.HandleFunc("GET /auth/github/callback", s.handleGithubCallback)
+	mux.HandleFunc("POST /auth/logout", s.handleLogout)
+	mux.HandleFunc("GET /auth/me", s.handleMe)
+
 	return &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.Addr, cfg.Port),
+		Addr:         cfg.Addr,
 		Handler:      mux,
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,

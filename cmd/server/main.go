@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/beavercli/beaver_api/common/config"
 	_ "github.com/beavercli/beaver_api/docs"
 	"github.com/beavercli/beaver_api/internal/router"
 )
@@ -20,11 +21,12 @@ import (
 // @host      localhost:8080
 // @BasePath  /api/v1
 func main() {
+	cfg := config.New()
+
 	srv := router.New(router.Config{
-		Addr:         "127.0.0.1",
-		Port:         8080,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:         cfg.Server.Addr,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	})
 
 	go func() {

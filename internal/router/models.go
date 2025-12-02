@@ -36,6 +36,16 @@ type CreateSnippetRequest struct {
 	Contributors []string `json:"contributors"`
 }
 
+type User struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email,omitempty"`
+}
+
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
