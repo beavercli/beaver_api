@@ -33,20 +33,19 @@ sqlc:
 
 ## migrate-up: Run all pending migrations
 migrate-up:
-	goose -dir migrations postgres "$(DATABASE_URL)" up
+	goose up
 
 ## migrate-down: Rollback the last migration
 migrate-down:
-	goose -dir migrations postgres "$(DATABASE_URL)" down
+	goose down
 
-## migrate-create: Create a new migration file
+## migrate-create: Create a new migration file (usage: make migrate-create name=<migration_name>)
 migrate-create:
-	@read -p "Migration name: " name; \
-	goose -dir migrations create $$name sql
+	goose create $(name) sql
 
 ## migrate-status: Show migration status
 migrate-status:
-	goose -dir migrations postgres "$(DATABASE_URL)" status
+	goose status
 
 ## docker-up: Start docker compose services
 docker-up:
