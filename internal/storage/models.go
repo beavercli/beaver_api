@@ -5,12 +5,11 @@
 package storage
 
 import (
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Contributor struct {
-	ID        uuid.UUID
+	ID        int64
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	FirstName pgtype.Text
@@ -19,34 +18,34 @@ type Contributor struct {
 }
 
 type Language struct {
-	ID        uuid.UUID
+	ID        int64
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	Name      pgtype.Text
 }
 
-type Script struct {
-	ID         uuid.UUID
+type Snippet struct {
+	ID         int64
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	Title      pgtype.Text
 	Code       pgtype.Text
 	ProjectUrl pgtype.Text
-	LanguageID pgtype.UUID
+	LanguageID pgtype.Int8
 }
 
-type ScriptContributor struct {
-	ScriptID      uuid.UUID
-	ContributorID uuid.UUID
+type SnippetContributor struct {
+	SnippetID     int64
+	ContributorID int64
 }
 
-type ScriptTag struct {
-	ScriptID uuid.UUID
-	TagID    uuid.UUID
+type SnippetTag struct {
+	SnippetID int64
+	TagID     int64
 }
 
 type Tag struct {
-	ID        uuid.UUID
+	ID        int64
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	Name      pgtype.Text

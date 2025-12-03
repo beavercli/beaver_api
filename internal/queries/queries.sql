@@ -10,7 +10,7 @@ INSERT INTO tags (name) VALUES($1) ON CONFLICT (name) DO NOTHING;
 SELECT id FROM tags WHERE name=$1;
 
 -- name: DeleteTagsExcept :exec
-DELETE FROM tags WHERE NOT (id = ANY(sqlc.narg('ids')::UUID[]));
+DELETE FROM tags WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
 -- name: CountTags :one
 SELECT COUNT(*) FROM tags;
@@ -27,7 +27,7 @@ INSERT INTO languages (name) VALUES($1) ON CONFLICT (name) DO NOTHING;
 SELECT id FROM languages WHERE name=$1;
 
 -- name: DeleteLanguagesExcept :exec
-DELETE FROM languages WHERE NOT (id = ANY(sqlc.narg('ids')::UUID[]));
+DELETE FROM languages WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
 -- name: CountLanguages :one
 SELECT COUNT(*) FROM languages;
@@ -44,7 +44,7 @@ INSERT INTO contributors (first_name, last_name, email) VALUES($1, $2, $3) ON CO
 SELECT id FROM contributors WHERE email=$1;
 
 -- name: DeleteContributorsExcept :exec
-DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::UUID[]));
+DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
 -- Snippets
 
@@ -72,3 +72,29 @@ INSERT INTO snippet_contributors (snippet_id, contributor_id) VALUES($1, $2) ON 
 
 -- name: ListLinkedContributorIDs :many
 SELECT DISTINCT(contributor_id) FROM snippet_contributors;
+
+-- name: GetSnippetByID :one
+SELECT
+    s.id,
+    s.title,
+    s.code,
+    s.project_url,
+    s.created_at,
+    s.updated_at,
+    l.id AS language_id,
+    l.name AS language_name
+FROM snippets s
+LEFT JOIN languages l ON s.language_id = l.id
+WHERE s.id = $1;
+
+-- name: GetTagsBySnippetID :many
+SELECT t.id, t.name
+FROM tags t
+INNER JOIN snippet_tags st ON t.id = st.tag_id
+WHERE st.snippet_id = $1;
+
+-- name: GetContributorsBySnippetID :many
+SELECT c.id, c.first_name, c.last_name, c.email
+FROM contributors c
+INNER JOIN snippet_contributors sc ON c.id = sc.contributor_id
+WHERE sc.snippet_id = $1;

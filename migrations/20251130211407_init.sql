@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE tags(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
 
@@ -9,7 +9,7 @@ CREATE TABLE tags(
 );
 
 CREATE TABLE languages(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
 
@@ -17,7 +17,7 @@ CREATE TABLE languages(
 );
 
 CREATE TABLE contributors(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
 
@@ -27,25 +27,25 @@ CREATE TABLE contributors(
 );
 
 CREATE TABLE snippets(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
 
     title VARCHAR(255) UNIQUE,
     code TEXT,
     project_url VARCHAR(1024),
-    language_id UUID REFERENCES languages(id) ON DELETE SET NULL
+    language_id BIGINT REFERENCES languages(id) ON DELETE SET NULL
 );
 
 CREATE TABLE snippet_tags(
-    snippet_id UUID REFERENCES snippets(id) ON DELETE CASCADE,
-    tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+    snippet_id BIGINT REFERENCES snippets(id) ON DELETE CASCADE,
+    tag_id BIGINT REFERENCES tags(id) ON DELETE CASCADE,
     PRIMARY KEY(snippet_id, tag_id)
 );
 
 CREATE TABLE snippet_contributors(
-    snippet_id UUID REFERENCES snippets(id) ON DELETE CASCADE,
-    contributor_id UUID REFERENCES contributors(id) ON DELETE CASCADE,
+    snippet_id BIGINT REFERENCES snippets(id) ON DELETE CASCADE,
+    contributor_id BIGINT REFERENCES contributors(id) ON DELETE CASCADE,
     PRIMARY KEY(snippet_id, contributor_id)
 );
 -- +goose StatementEnd

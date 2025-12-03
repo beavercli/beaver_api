@@ -8,7 +8,6 @@ package storage
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -35,37 +34,37 @@ func (q *Queries) CountTags(ctx context.Context) (int64, error) {
 }
 
 const deleteContributorsExcept = `-- name: DeleteContributorsExcept :exec
-DELETE FROM contributors WHERE NOT (id = ANY($1::UUID[]))
+DELETE FROM contributors WHERE NOT (id = ANY($1::BIGINT[]))
 `
 
-func (q *Queries) DeleteContributorsExcept(ctx context.Context, ids []uuid.UUID) error {
+func (q *Queries) DeleteContributorsExcept(ctx context.Context, ids []int64) error {
 	_, err := q.db.Exec(ctx, deleteContributorsExcept, ids)
 	return err
 }
 
 const deleteLanguagesExcept = `-- name: DeleteLanguagesExcept :exec
-DELETE FROM languages WHERE NOT (id = ANY($1::UUID[]))
+DELETE FROM languages WHERE NOT (id = ANY($1::BIGINT[]))
 `
 
-func (q *Queries) DeleteLanguagesExcept(ctx context.Context, ids []uuid.UUID) error {
+func (q *Queries) DeleteLanguagesExcept(ctx context.Context, ids []int64) error {
 	_, err := q.db.Exec(ctx, deleteLanguagesExcept, ids)
 	return err
 }
 
-const deleteScriptsBefore = `-- name: DeleteScriptsBefore :exec
-DELETE FROM scripts WHERE created_at < $1
+const deleteSnippetsBefore = `-- name: DeleteSnippetsBefore :exec
+DELETE FROM snippets WHERE created_at < $1
 `
 
-func (q *Queries) DeleteScriptsBefore(ctx context.Context, createdAt pgtype.Timestamptz) error {
-	_, err := q.db.Exec(ctx, deleteScriptsBefore, createdAt)
+func (q *Queries) DeleteSnippetsBefore(ctx context.Context, createdAt pgtype.Timestamptz) error {
+	_, err := q.db.Exec(ctx, deleteSnippetsBefore, createdAt)
 	return err
 }
 
 const deleteTagsExcept = `-- name: DeleteTagsExcept :exec
-DELETE FROM tags WHERE NOT (id = ANY($1::UUID[]))
+DELETE FROM tags WHERE NOT (id = ANY($1::BIGINT[]))
 `
 
-func (q *Queries) DeleteTagsExcept(ctx context.Context, ids []uuid.UUID) error {
+func (q *Queries) DeleteTagsExcept(ctx context.Context, ids []int64) error {
 	_, err := q.db.Exec(ctx, deleteTagsExcept, ids)
 	return err
 }
@@ -74,31 +73,112 @@ const getContributorIDByEmail = `-- name: GetContributorIDByEmail :one
 SELECT id FROM contributors WHERE email=$1
 `
 
-func (q *Queries) GetContributorIDByEmail(ctx context.Context, email pgtype.Text) (uuid.UUID, error) {
+func (q *Queries) GetContributorIDByEmail(ctx context.Context, email pgtype.Text) (int64, error) {
 	row := q.db.QueryRow(ctx, getContributorIDByEmail, email)
-	var id uuid.UUID
+	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getContributorsBySnippetID = `-- name: GetContributorsBySnippetID :many
+SELECT c.id, c.first_name, c.last_name, c.email
+FROM contributors c
+INNER JOIN snippet_contributors sc ON c.id = sc.contributor_id
+WHERE sc.snippet_id = $1
+`
+
+type GetContributorsBySnippetIDRow struct {
+	ID        int64
+	FirstName pgtype.Text
+	LastName  pgtype.Text
+	Email     pgtype.Text
+}
+
+func (q *Queries) GetContributorsBySnippetID(ctx context.Context, snippetID int64) ([]GetContributorsBySnippetIDRow, error) {
+	rows, err := q.db.Query(ctx, getContributorsBySnippetID, snippetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetContributorsBySnippetIDRow
+	for rows.Next() {
+		var i GetContributorsBySnippetIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Email,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getLanguageIDByName = `-- name: GetLanguageIDByName :one
 SELECT id FROM languages WHERE name=$1
 `
 
-func (q *Queries) GetLanguageIDByName(ctx context.Context, name pgtype.Text) (uuid.UUID, error) {
+func (q *Queries) GetLanguageIDByName(ctx context.Context, name pgtype.Text) (int64, error) {
 	row := q.db.QueryRow(ctx, getLanguageIDByName, name)
-	var id uuid.UUID
+	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
 
-const getScriptIDByTitle = `-- name: GetScriptIDByTitle :one
-SELECT id FROM scripts WHERE title=$1
+const getSnippetByID = `-- name: GetSnippetByID :one
+SELECT
+    s.id,
+    s.title,
+    s.code,
+    s.project_url,
+    s.created_at,
+    s.updated_at,
+    l.id AS language_id,
+    l.name AS language_name
+FROM snippets s
+LEFT JOIN languages l ON s.language_id = l.id
+WHERE s.id = $1
 `
 
-func (q *Queries) GetScriptIDByTitle(ctx context.Context, title pgtype.Text) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, getScriptIDByTitle, title)
-	var id uuid.UUID
+type GetSnippetByIDRow struct {
+	ID           int64
+	Title        pgtype.Text
+	Code         pgtype.Text
+	ProjectUrl   pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	LanguageID   pgtype.Int8
+	LanguageName pgtype.Text
+}
+
+func (q *Queries) GetSnippetByID(ctx context.Context, id int64) (GetSnippetByIDRow, error) {
+	row := q.db.QueryRow(ctx, getSnippetByID, id)
+	var i GetSnippetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Code,
+		&i.ProjectUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LanguageID,
+		&i.LanguageName,
+	)
+	return i, err
+}
+
+const getSnippetIDByTitle = `-- name: GetSnippetIDByTitle :one
+SELECT id FROM snippets WHERE title=$1
+`
+
+func (q *Queries) GetSnippetIDByTitle(ctx context.Context, title pgtype.Text) (int64, error) {
+	row := q.db.QueryRow(ctx, getSnippetIDByTitle, title)
+	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
@@ -107,38 +187,70 @@ const getTagIDByName = `-- name: GetTagIDByName :one
 SELECT id FROM tags WHERE name=$1
 `
 
-func (q *Queries) GetTagIDByName(ctx context.Context, name pgtype.Text) (uuid.UUID, error) {
+func (q *Queries) GetTagIDByName(ctx context.Context, name pgtype.Text) (int64, error) {
 	row := q.db.QueryRow(ctx, getTagIDByName, name)
-	var id uuid.UUID
+	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
 
-const linkScriptContributor = `-- name: LinkScriptContributor :exec
-INSERT INTO script_contributors (script_id, contributor_id) VALUES($1, $2) ON CONFLICT (script_id, contributor_id) DO NOTHING
+const getTagsBySnippetID = `-- name: GetTagsBySnippetID :many
+SELECT t.id, t.name
+FROM tags t
+INNER JOIN snippet_tags st ON t.id = st.tag_id
+WHERE st.snippet_id = $1
 `
 
-type LinkScriptContributorParams struct {
-	ScriptID      uuid.UUID
-	ContributorID uuid.UUID
+type GetTagsBySnippetIDRow struct {
+	ID   int64
+	Name pgtype.Text
 }
 
-func (q *Queries) LinkScriptContributor(ctx context.Context, arg LinkScriptContributorParams) error {
-	_, err := q.db.Exec(ctx, linkScriptContributor, arg.ScriptID, arg.ContributorID)
+func (q *Queries) GetTagsBySnippetID(ctx context.Context, snippetID int64) ([]GetTagsBySnippetIDRow, error) {
+	rows, err := q.db.Query(ctx, getTagsBySnippetID, snippetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTagsBySnippetIDRow
+	for rows.Next() {
+		var i GetTagsBySnippetIDRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const linkSnippetContributor = `-- name: LinkSnippetContributor :exec
+INSERT INTO snippet_contributors (snippet_id, contributor_id) VALUES($1, $2) ON CONFLICT (snippet_id, contributor_id) DO NOTHING
+`
+
+type LinkSnippetContributorParams struct {
+	SnippetID     int64
+	ContributorID int64
+}
+
+func (q *Queries) LinkSnippetContributor(ctx context.Context, arg LinkSnippetContributorParams) error {
+	_, err := q.db.Exec(ctx, linkSnippetContributor, arg.SnippetID, arg.ContributorID)
 	return err
 }
 
-const linkScriptTag = `-- name: LinkScriptTag :exec
-INSERT INTO script_tags (script_id, tag_id) VALUES($1, $2) ON CONFLICT (script_id, tag_id) DO NOTHING
+const linkSnippetTag = `-- name: LinkSnippetTag :exec
+INSERT INTO snippet_tags (snippet_id, tag_id) VALUES($1, $2) ON CONFLICT (snippet_id, tag_id) DO NOTHING
 `
 
-type LinkScriptTagParams struct {
-	ScriptID uuid.UUID
-	TagID    uuid.UUID
+type LinkSnippetTagParams struct {
+	SnippetID int64
+	TagID     int64
 }
 
-func (q *Queries) LinkScriptTag(ctx context.Context, arg LinkScriptTagParams) error {
-	_, err := q.db.Exec(ctx, linkScriptTag, arg.ScriptID, arg.TagID)
+func (q *Queries) LinkSnippetTag(ctx context.Context, arg LinkSnippetTagParams) error {
+	_, err := q.db.Exec(ctx, linkSnippetTag, arg.SnippetID, arg.TagID)
 	return err
 }
 
@@ -217,18 +329,18 @@ func (q *Queries) ListLanguages(ctx context.Context, arg ListLanguagesParams) ([
 }
 
 const listLinkedContributorIDs = `-- name: ListLinkedContributorIDs :many
-SELECT DISTINCT(contributor_id) FROM script_contributors
+SELECT DISTINCT(contributor_id) FROM snippet_contributors
 `
 
-func (q *Queries) ListLinkedContributorIDs(ctx context.Context) ([]uuid.UUID, error) {
+func (q *Queries) ListLinkedContributorIDs(ctx context.Context) ([]int64, error) {
 	rows, err := q.db.Query(ctx, listLinkedContributorIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []int64
 	for rows.Next() {
-		var contributor_id uuid.UUID
+		var contributor_id int64
 		if err := rows.Scan(&contributor_id); err != nil {
 			return nil, err
 		}
@@ -241,18 +353,18 @@ func (q *Queries) ListLinkedContributorIDs(ctx context.Context) ([]uuid.UUID, er
 }
 
 const listLinkedTagIDs = `-- name: ListLinkedTagIDs :many
-SELECT DISTINCT(tag_id) FROM script_tags
+SELECT DISTINCT(tag_id) FROM snippet_tags
 `
 
-func (q *Queries) ListLinkedTagIDs(ctx context.Context) ([]uuid.UUID, error) {
+func (q *Queries) ListLinkedTagIDs(ctx context.Context) ([]int64, error) {
 	rows, err := q.db.Query(ctx, listLinkedTagIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []int64
 	for rows.Next() {
-		var tag_id uuid.UUID
+		var tag_id int64
 		if err := rows.Scan(&tag_id); err != nil {
 			return nil, err
 		}
@@ -301,18 +413,18 @@ func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]Tag, erro
 }
 
 const listUsedLanguageIDs = `-- name: ListUsedLanguageIDs :many
-SELECT DISTINCT(language_id) FROM scripts
+SELECT DISTINCT(language_id) FROM snippets
 `
 
-func (q *Queries) ListUsedLanguageIDs(ctx context.Context) ([]pgtype.UUID, error) {
+func (q *Queries) ListUsedLanguageIDs(ctx context.Context) ([]pgtype.Int8, error) {
 	rows, err := q.db.Query(ctx, listUsedLanguageIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []pgtype.UUID
+	var items []pgtype.Int8
 	for rows.Next() {
-		var language_id pgtype.UUID
+		var language_id pgtype.Int8
 		if err := rows.Scan(&language_id); err != nil {
 			return nil, err
 		}
@@ -348,23 +460,23 @@ func (q *Queries) UpsertLanguage(ctx context.Context, name pgtype.Text) error {
 	return err
 }
 
-const upsertScript = `-- name: UpsertScript :exec
+const upsertSnippet = `-- name: UpsertSnippet :exec
 
-INSERT INTO scripts (title, code, project_url, language_id, created_at) VALUES($1, $2, $3, $4, $5)
+INSERT INTO snippets (title, code, project_url, language_id, created_at) VALUES($1, $2, $3, $4, $5)
 ON CONFLICT (title) DO UPDATE SET created_at = EXCLUDED.created_at
 `
 
-type UpsertScriptParams struct {
+type UpsertSnippetParams struct {
 	Title      pgtype.Text
 	Code       pgtype.Text
 	ProjectUrl pgtype.Text
-	LanguageID pgtype.UUID
+	LanguageID pgtype.Int8
 	CreatedAt  pgtype.Timestamptz
 }
 
-// Scripts
-func (q *Queries) UpsertScript(ctx context.Context, arg UpsertScriptParams) error {
-	_, err := q.db.Exec(ctx, upsertScript,
+// Snippets
+func (q *Queries) UpsertSnippet(ctx context.Context, arg UpsertSnippetParams) error {
+	_, err := q.db.Exec(ctx, upsertSnippet,
 		arg.Title,
 		arg.Code,
 		arg.ProjectUrl,
