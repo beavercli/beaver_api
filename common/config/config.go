@@ -7,8 +7,14 @@ import (
 )
 
 type Database struct {
-	URI string `env:"DATABASE_URI"`
+	URI               string        `env:"DATABASE_URI,required"`
+	MaxConns          int32         `env:"DATABASE_MAX_CONNS" envDefault:"25"`
+	MinConns          int32         `env:"DATABASE_MIN_CONNS" envDefault:"5"`
+	MaxConnLifetime   time.Duration `env:"DATABASE_MAX_CONN_LIFETIME" envDefault:"1h"`
+	MaxConnIdleTime   time.Duration `env:"DATABASE_MAX_CONN_IDLE_TIME" envDefault:"30m"`
+	HealthCheckPeriod time.Duration `env:"DATABASE_HEALTH_CHECK_PERIOD" envDefault:"1m"`
 }
+
 
 type Server struct {
 	Addr         string        `env:"SERVER_ADDR"`
