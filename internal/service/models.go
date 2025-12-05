@@ -27,13 +27,17 @@ type Snippet struct {
 	Contributors []Contributor
 }
 
-type CreateSnippetRequest struct {
-	Title        string
-	Code         string
-	ProjectURL   string
-	Language     string
-	Tags         []string
-	Contributors []string
+type SnippetSummary struct {
+	ID         int64
+	Title      string
+	ProjectURL string
+	Language   *Language
+	Tags       []Tag
+}
+
+type SnippetsList struct {
+	Items []SnippetSummary
+	Total int64
 }
 
 type User struct {
