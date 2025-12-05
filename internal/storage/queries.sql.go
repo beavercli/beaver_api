@@ -22,6 +22,25 @@ func (q *Queries) CountLanguages(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countSnippetsFiltered = `-- name: CountSnippetsFiltered :one
+SELECT COUNT(DISTINCT s.id) FROM snippets s
+LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+WHERE ($1::BIGINT IS NULL OR s.language_id = $1::BIGINT)
+  AND (COALESCE($2::BIGINT[], '{}') = '{}' OR st.tag_id = ANY($2::BIGINT[]))
+`
+
+type CountSnippetsFilteredParams struct {
+	LanguageID pgtype.Int8
+	TagIds     []int64
+}
+
+func (q *Queries) CountSnippetsFiltered(ctx context.Context, arg CountSnippetsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSnippetsFiltered, arg.LanguageID, arg.TagIds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTags = `-- name: CountTags :one
 SELECT COUNT(*) FROM tags
 `
@@ -117,6 +136,24 @@ func (q *Queries) GetContributorsBySnippetID(ctx context.Context, snippetID int6
 		return nil, err
 	}
 	return items, nil
+}
+
+const getLanguageBySnippetID = `-- name: GetLanguageBySnippetID :one
+SELECT l.id, l.created_at, l.updated_at, l.name FROM languages l
+INNER JOIN snippets s ON s.language_id = l.id
+WHERE s.id = $1
+`
+
+func (q *Queries) GetLanguageBySnippetID(ctx context.Context, id int64) (Language, error) {
+	row := q.db.QueryRow(ctx, getLanguageBySnippetID, id)
+	var i Language
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return i, err
 }
 
 const getLanguageIDByName = `-- name: GetLanguageIDByName :one
@@ -226,6 +263,50 @@ func (q *Queries) GetTagsBySnippetID(ctx context.Context, snippetID int64) ([]Ge
 	return items, nil
 }
 
+const getTagsBySnippetIDs = `-- name: GetTagsBySnippetIDs :many
+SELECT st.snippet_id, t.id, t.name
+FROM tags t
+INNER JOIN snippet_tags st ON t.id = st.tag_id
+WHERE st.snippet_id = ANY($1::BIGINT[])
+`
+
+type GetTagsBySnippetIDsRow struct {
+	SnippetID int64
+	ID        int64
+	Name      pgtype.Text
+}
+
+func (q *Queries) GetTagsBySnippetIDs(ctx context.Context, snippetIds []int64) ([]GetTagsBySnippetIDsRow, error) {
+	rows, err := q.db.Query(ctx, getTagsBySnippetIDs, snippetIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTagsBySnippetIDsRow
+	for rows.Next() {
+		var i GetTagsBySnippetIDsRow
+		if err := rows.Scan(&i.SnippetID, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserIDByEmail = `-- name: GetUserIDByEmail :one
+SELECT id FROM users WHERE email = $1
+`
+
+func (q *Queries) GetUserIDByEmail(ctx context.Context, email string) (int64, error) {
+	row := q.db.QueryRow(ctx, getUserIDByEmail, email)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const linkSnippetContributor = `-- name: LinkSnippetContributor :exec
 INSERT INTO snippet_contributors (snippet_id, contributor_id) VALUES($1, $2) ON CONFLICT (snippet_id, contributor_id) DO NOTHING
 `
@@ -252,6 +333,126 @@ type LinkSnippetTagParams struct {
 func (q *Queries) LinkSnippetTag(ctx context.Context, arg LinkSnippetTagParams) error {
 	_, err := q.db.Exec(ctx, linkSnippetTag, arg.SnippetID, arg.TagID)
 	return err
+}
+
+const listAllContributors = `-- name: ListAllContributors :many
+SELECT id, created_at, updated_at, first_name, last_name, email FROM contributors
+`
+
+func (q *Queries) ListAllContributors(ctx context.Context) ([]Contributor, error) {
+	rows, err := q.db.Query(ctx, listAllContributors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Contributor
+	for rows.Next() {
+		var i Contributor
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FirstName,
+			&i.LastName,
+			&i.Email,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllLanguages = `-- name: ListAllLanguages :many
+SELECT id, created_at, updated_at, name FROM languages
+`
+
+func (q *Queries) ListAllLanguages(ctx context.Context) ([]Language, error) {
+	rows, err := q.db.Query(ctx, listAllLanguages)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Language
+	for rows.Next() {
+		var i Language
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllTags = `-- name: ListAllTags :many
+SELECT id, created_at, updated_at, name FROM tags
+`
+
+func (q *Queries) ListAllTags(ctx context.Context) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, listAllTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tag
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllUsers = `-- name: ListAllUsers :many
+SELECT id, created_at, updated_at, username, email, password_hash FROM users
+`
+
+func (q *Queries) ListAllUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.Query(ctx, listAllUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.Email,
+			&i.PasswordHash,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listContributors = `-- name: ListContributors :many
@@ -376,6 +577,92 @@ func (q *Queries) ListLinkedTagIDs(ctx context.Context) ([]int64, error) {
 	return items, nil
 }
 
+const listSnippetIDs = `-- name: ListSnippetIDs :many
+SELECT id FROM snippets
+`
+
+func (q *Queries) ListSnippetIDs(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listSnippetIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSnippetsFiltered = `-- name: ListSnippetsFiltered :many
+SELECT DISTINCT
+    s.id,
+    s.title,
+    s.project_url,
+    l.id AS language_id,
+    l.name AS language_name
+FROM snippets s
+LEFT JOIN languages l ON s.language_id = l.id
+LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+WHERE ($1::BIGINT IS NULL OR s.language_id = $1::BIGINT)
+  AND (COALESCE($2::BIGINT[], '{}') = '{}' OR st.tag_id = ANY($2::BIGINT[]))
+ORDER BY s.id
+OFFSET $3::INT LIMIT $4::INT
+`
+
+type ListSnippetsFilteredParams struct {
+	LanguageID pgtype.Int8
+	TagIds     []int64
+	SqlOffset  int32
+	SqlLimit   int32
+}
+
+type ListSnippetsFilteredRow struct {
+	ID           int64
+	Title        pgtype.Text
+	ProjectUrl   pgtype.Text
+	LanguageID   pgtype.Int8
+	LanguageName pgtype.Text
+}
+
+func (q *Queries) ListSnippetsFiltered(ctx context.Context, arg ListSnippetsFilteredParams) ([]ListSnippetsFilteredRow, error) {
+	rows, err := q.db.Query(ctx, listSnippetsFiltered,
+		arg.LanguageID,
+		arg.TagIds,
+		arg.SqlOffset,
+		arg.SqlLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSnippetsFilteredRow
+	for rows.Next() {
+		var i ListSnippetsFilteredRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.ProjectUrl,
+			&i.LanguageID,
+			&i.LanguageName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTags = `-- name: ListTags :many
 
 SELECT id, created_at, updated_at, name FROM tags OFFSET $1 LIMIT $2
@@ -460,10 +747,12 @@ func (q *Queries) UpsertLanguage(ctx context.Context, name pgtype.Text) error {
 	return err
 }
 
-const upsertSnippet = `-- name: UpsertSnippet :exec
+const upsertSnippet = `-- name: UpsertSnippet :one
 
-INSERT INTO snippets (title, code, project_url, language_id, created_at) VALUES($1, $2, $3, $4, $5)
+INSERT INTO snippets (title, code, project_url, language_id, user_id, created_at)
+VALUES($1, $2, $3, $4, $5, $6)
 ON CONFLICT (title) DO UPDATE SET created_at = EXCLUDED.created_at
+RETURNING id
 `
 
 type UpsertSnippetParams struct {
@@ -471,19 +760,23 @@ type UpsertSnippetParams struct {
 	Code       pgtype.Text
 	ProjectUrl pgtype.Text
 	LanguageID pgtype.Int8
+	UserID     pgtype.Int8
 	CreatedAt  pgtype.Timestamptz
 }
 
 // Snippets
-func (q *Queries) UpsertSnippet(ctx context.Context, arg UpsertSnippetParams) error {
-	_, err := q.db.Exec(ctx, upsertSnippet,
+func (q *Queries) UpsertSnippet(ctx context.Context, arg UpsertSnippetParams) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertSnippet,
 		arg.Title,
 		arg.Code,
 		arg.ProjectUrl,
 		arg.LanguageID,
+		arg.UserID,
 		arg.CreatedAt,
 	)
-	return err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const upsertTag = `-- name: UpsertTag :exec
@@ -492,5 +785,24 @@ INSERT INTO tags (name) VALUES($1) ON CONFLICT (name) DO NOTHING
 
 func (q *Queries) UpsertTag(ctx context.Context, name pgtype.Text) error {
 	_, err := q.db.Exec(ctx, upsertTag, name)
+	return err
+}
+
+const upsertUser = `-- name: UpsertUser :exec
+
+INSERT INTO users (username, email, password_hash)
+VALUES ($1, $2, $3)
+ON CONFLICT (email) DO NOTHING
+`
+
+type UpsertUserParams struct {
+	Username     string
+	Email        string
+	PasswordHash string
+}
+
+// Users
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) error {
+	_, err := q.db.Exec(ctx, upsertUser, arg.Username, arg.Email, arg.PasswordHash)
 	return err
 }
