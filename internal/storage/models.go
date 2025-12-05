@@ -32,6 +32,7 @@ type Snippet struct {
 	Code       pgtype.Text
 	ProjectUrl pgtype.Text
 	LanguageID pgtype.Int8
+	UserID     pgtype.Int8
 }
 
 type SnippetContributor struct {
@@ -49,4 +50,13 @@ type Tag struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	Name      pgtype.Text
+}
+
+type User struct {
+	ID           int64
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	Username     string
+	Email        string
+	PasswordHash string
 }

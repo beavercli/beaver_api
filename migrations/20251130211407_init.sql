@@ -1,5 +1,15 @@
 -- +goose Up
 -- +goose StatementBegin
+CREATE TABLE users(
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(1024) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL
+);
+
 CREATE TABLE tags(
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -34,7 +44,9 @@ CREATE TABLE snippets(
     title VARCHAR(255) UNIQUE,
     code TEXT,
     project_url VARCHAR(1024),
-    language_id BIGINT REFERENCES languages(id) ON DELETE SET NULL
+
+    language_id BIGINT REFERENCES languages(id) ON DELETE SET NULL,
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE snippet_tags(
@@ -48,6 +60,10 @@ CREATE TABLE snippet_contributors(
     contributor_id BIGINT REFERENCES contributors(id) ON DELETE CASCADE,
     PRIMARY KEY(snippet_id, contributor_id)
 );
+
+-- Indexes for filtering by tags and contributors (junction tables)
+CREATE INDEX idx_snippet_tags_tag ON snippet_tags (tag_id, snippet_id);
+CREATE INDEX idx_snippet_contributors_contributor ON snippet_contributors (contributor_id, snippet_id);
 -- +goose StatementEnd
 
 -- +goose Down
@@ -58,4 +74,5 @@ DROP TABLE snippets;
 DROP TABLE contributors;
 DROP TABLE languages;
 DROP TABLE tags;
+DROP TABLE users;
 -- +goose StatementEnd

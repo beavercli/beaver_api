@@ -32,6 +32,11 @@ DELETE FROM languages WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 -- name: CountLanguages :one
 SELECT COUNT(*) FROM languages;
 
+-- name: GetLanguageBySnippetID :one
+SELECT l.* FROM languages l
+INNER JOIN snippets s ON s.language_id = l.id
+WHERE s.id = $1;
+
 -- Contributors
 
 -- name: ListContributors :many
@@ -48,9 +53,11 @@ DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
 -- Snippets
 
--- name: UpsertSnippet :exec
-INSERT INTO snippets (title, code, project_url, language_id, created_at) VALUES($1, $2, $3, $4, $5)
-ON CONFLICT (title) DO UPDATE SET created_at = EXCLUDED.created_at;
+-- name: UpsertSnippet :one
+INSERT INTO snippets (title, code, project_url, language_id, user_id, created_at)
+VALUES($1, $2, $3, $4, $5, $6)
+ON CONFLICT (title) DO UPDATE SET created_at = EXCLUDED.created_at
+RETURNING id;
 
 -- name: GetSnippetIDByTitle :one
 SELECT id FROM snippets WHERE title=$1;
@@ -98,3 +105,55 @@ SELECT c.id, c.first_name, c.last_name, c.email
 FROM contributors c
 INNER JOIN snippet_contributors sc ON c.id = sc.contributor_id
 WHERE sc.snippet_id = $1;
+
+-- name: ListSnippetIDs :many
+SELECT id FROM snippets;
+
+-- name: ListSnippetsFiltered :many
+SELECT DISTINCT
+    s.id,
+    s.title,
+    s.project_url,
+    l.id AS language_id,
+    l.name AS language_name
+FROM snippets s
+LEFT JOIN languages l ON s.language_id = l.id
+LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+WHERE (sqlc.narg('language_id')::BIGINT IS NULL OR s.language_id = sqlc.narg('language_id')::BIGINT)
+  AND (COALESCE(sqlc.narg('tag_ids')::BIGINT[], '{}') = '{}' OR st.tag_id = ANY(sqlc.narg('tag_ids')::BIGINT[]))
+ORDER BY s.id
+OFFSET sqlc.arg('sql_offset')::INT LIMIT sqlc.arg('sql_limit')::INT;
+
+-- name: CountSnippetsFiltered :one
+SELECT COUNT(DISTINCT s.id) FROM snippets s
+LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+WHERE (sqlc.narg('language_id')::BIGINT IS NULL OR s.language_id = sqlc.narg('language_id')::BIGINT)
+  AND (COALESCE(sqlc.narg('tag_ids')::BIGINT[], '{}') = '{}' OR st.tag_id = ANY(sqlc.narg('tag_ids')::BIGINT[]));
+
+-- name: GetTagsBySnippetIDs :many
+SELECT st.snippet_id, t.id, t.name
+FROM tags t
+INNER JOIN snippet_tags st ON t.id = st.tag_id
+WHERE st.snippet_id = ANY(sqlc.arg('snippet_ids')::BIGINT[]);
+
+-- Users
+
+-- name: UpsertUser :exec
+INSERT INTO users (username, email, password_hash)
+VALUES ($1, $2, $3)
+ON CONFLICT (email) DO NOTHING;
+
+-- name: GetUserIDByEmail :one
+SELECT id FROM users WHERE email = $1;
+
+-- name: ListAllTags :many
+SELECT * FROM tags;
+
+-- name: ListAllLanguages :many
+SELECT * FROM languages;
+
+-- name: ListAllContributors :many
+SELECT * FROM contributors;
+
+-- name: ListAllUsers :many
+SELECT * FROM users;
