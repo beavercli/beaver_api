@@ -3,28 +3,28 @@ package router
 import (
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/beavercli/beaver_api/common/config"
+	"github.com/beavercli/beaver_api/internal/service"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-type Config struct {
-	Addr         string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-}
-
 type server struct {
+	service *service.Service
 }
 
-func New(cfg Config) *http.Server {
+func New(cfg config.Server, service *service.Service) *http.Server {
 	mux := http.NewServeMux()
-	s := &server{}
+
+	s := &server{
+		service: service,
+	}
 
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
 
-	mux.HandleFunc("GET /api/v1/snippets/random", s.handleGetRandomSnippet)
+	mux.HandleFunc("GET /api/v1/snippets/{SnippetID}", s.handleGetSnippet)
+	mux.HandleFunc("GET /api/v1/snippets", s.handleListSnippets)
 	mux.HandleFunc("POST /api/v1/snippets", s.handleCreateSnippet)
 
 	mux.HandleFunc("GET /api/v1/tags", s.handleListTags)
