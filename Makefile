@@ -1,4 +1,4 @@
-.PHONY: help run build swagger sqlc migrate-up migrate-down migrate-create docker-up docker-down test
+.PHONY: help run build seed swagger sqlc migrate-up migrate-down migrate-create docker-up docker-down test
 
 .DEFAULT_GOAL := help
 
@@ -22,6 +22,10 @@ run: build
 ## build: Build the server binary
 build:
 	go build -o bin/server ./cmd/server
+
+## seed: Seed the database with test data
+seed:
+	go run ./cmd/seed
 
 ## swagger: Generate Swagger documentation
 swagger:
