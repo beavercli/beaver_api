@@ -1,6 +1,7 @@
 package router
 
 import (
+	"net/url"
 	"strconv"
 
 	"github.com/beavercli/beaver_api/internal/service"
@@ -122,6 +123,30 @@ func toSnippetSummaries(ss []service.SnippetSummary) []SnippetSummary {
 		snippetSummers[i] = toSnippetSummary(s)
 	}
 	return snippetSummers
+}
+
+type SnippetListFilterArg struct {
+	LanguageID *int64
+	TagIDs     []int64
+}
+
+func toSnippetListFilterArg(v url.Values) SnippetListFilterArg {
+	return SnippetListFilterArg{
+		LanguageID: strToInt(v.Get("language_id"), nil),
+		TagIDs:     strToInts(v["tag_id"]),
+	}
+}
+
+type PageQueryArg struct {
+	Page     int
+	PageSize int
+}
+
+func toPageQuery(v url.Values) PageQueryArg {
+	return PageQueryArg{
+		Page:     int(*strToInt(v.Get("page"), intPtr(1))),
+		PageSize: int(*strToInt(v.Get("page_size"), intPtr(20))),
+	}
 }
 
 type PageResponse[T any] struct {

@@ -1,8 +1,6 @@
 package router
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -22,11 +20,9 @@ import (
 func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("SnippetID")
 	id, err := strconv.ParseInt(idStr, 10, 64)
+
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid Snippet ID"}); err != nil {
-			fmt.Println("Cannot send error response")
-		}
+		jsonError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -36,7 +32,6 @@ func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: CONVERT TO RESPONSE DTO
 	jsonResponse(w, http.StatusOK, toSnippet(snippet))
 }
 
@@ -52,32 +47,15 @@ func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  ErrorResponse
 // @Router       /snippets [get]
 func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	page, err := strconv.Atoi(query.Get("page"))
-	if err != nil || page < 1 {
-		page = 1
-	}
-	pageSize, err := strconv.Atoi(query.Get("page_size"))
-	if err != nil || pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	v := r.URL.Query()
+	p := toPageQuery(v)
+	f := toSnippetListFilterArg(v)
 
-	var languageID *int64
-	if id, err := strconv.ParseInt(query.Get("language"), 10, 64); err == nil {
-		languageID = &id
-	}
-
-	var tagIDs []int64
-	for _, s := range query["tag"] {
-		if id, err := strconv.ParseInt(s, 10, 64); err == nil {
-			tagIDs = append(tagIDs, id)
-		}
-	}
 	snippetList, err := s.service.GetSnippetsPage(r.Context(), service.ListSnippetsParams{
-		Page:       page,
-		PageSize:   pageSize,
-		LanguageID: languageID,
-		TagIDs:     tagIDs,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		LanguageID: f.LanguageID,
+		TagIDs:     f.TagIDs,
 	})
 	if err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
@@ -85,7 +63,7 @@ func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	snippetsSummaries := toSnippetSummaries(snippetList.Items)
-	snippetPage := toPage(snippetsSummaries, snippetList.Total, page, pageSize)
+	snippetPage := toPage(snippetsSummaries, snippetList.Total, p.Page, p.PageSize)
 	jsonResponse(w, http.StatusOK, snippetPage)
 }
 
