@@ -23,12 +23,12 @@ func (s *Service) GetSnippet(ctx context.Context, id int64) (Snippet, error) {
 	})
 	g.Go(func() error {
 		var err error
-		tags, err = s.db.GetTagsBySnippetID(ctx, snippet.ID)
+		tags, err = s.db.GetTagsBySnippetID(ctx, id)
 		return err
 	})
 	g.Go(func() error {
 		var err error
-		contributors, err = s.db.GetContributorsBySnippetID(ctx, snippet.ID)
+		contributors, err = s.db.GetContributorsBySnippetID(ctx, id)
 		return err
 	})
 
