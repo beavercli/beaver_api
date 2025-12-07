@@ -39,8 +39,8 @@ func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        page       query  int     false  "Page number"      default(1)
 // @Param        page_size  query  int     false  "Items per page"   default(20)
-// @Param        language   query  string  false  "Filter by language"
-// @Param        tag        query  string  false  "Filter by tag"
+// @Param        language_id  query  int    false  "Filter by language ID"
+// @Param        tag_id       query  []int  false  "Filter by tag IDs (repeat: tag_id=1&tag_id=2)"  collectionFormat(multi)
 // @Success      200  {object}  SnippetsPageResponse
 // @Failure      500  {object}  ErrorResponse
 // @Router       /snippets [get]

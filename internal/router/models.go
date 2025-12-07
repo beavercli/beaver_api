@@ -133,7 +133,6 @@ type SnippetListFilterArg struct {
 
 func toSnippetListFilterArg(v url.Values) (SnippetListFilterArg, error) {
 	var langID *int64
-
 	if raw := v.Get("language_id"); raw != "" {
 		val, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
@@ -181,7 +180,7 @@ func toPageQuery(v url.Values) (PageQueryArg, error) {
 
 	if raw := v.Get("page"); raw != "" {
 		val, err := strconv.Atoi(raw)
-		if err != nil || val > 0 {
+		if err != nil || val <= 0 {
 			return PageQueryArg{}, fmt.Errorf("page must be a positive integer")
 		}
 	}
