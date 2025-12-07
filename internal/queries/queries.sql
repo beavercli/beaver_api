@@ -110,7 +110,7 @@ WHERE sc.snippet_id = $1;
 SELECT id FROM snippets;
 
 -- name: ListSnippetsFiltered :many
-SELECT DISTINCT
+SELECT
     s.id,
     s.title,
     s.project_url,
@@ -118,17 +118,33 @@ SELECT DISTINCT
     l.name AS language_name
 FROM snippets s
 LEFT JOIN languages l ON s.language_id = l.id
-LEFT JOIN snippet_tags st ON s.id = st.snippet_id
 WHERE (sqlc.narg('language_id')::BIGINT IS NULL OR s.language_id = sqlc.narg('language_id')::BIGINT)
-  AND (COALESCE(sqlc.narg('tag_ids')::BIGINT[], '{}') = '{}' OR st.tag_id = ANY(sqlc.narg('tag_ids')::BIGINT[]))
+  AND NOT EXISTS (
+    SELECT 1
+    FROM (SELECT unnest(sqlc.narg('tag_ids')::BIGINT[]) AS tag_id) ft
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM snippet_tags st
+      WHERE st.snippet_id = s.id
+        AND st.tag_id = ft.tag_id
+    )
+  )
 ORDER BY s.id
 OFFSET sqlc.arg('sql_offset')::INT LIMIT sqlc.arg('sql_limit')::INT;
 
 -- name: CountSnippetsFiltered :one
-SELECT COUNT(DISTINCT s.id) FROM snippets s
-LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+SELECT COUNT(*) FROM snippets s
 WHERE (sqlc.narg('language_id')::BIGINT IS NULL OR s.language_id = sqlc.narg('language_id')::BIGINT)
-  AND (COALESCE(sqlc.narg('tag_ids')::BIGINT[], '{}') = '{}' OR st.tag_id = ANY(sqlc.narg('tag_ids')::BIGINT[]));
+  AND NOT EXISTS (
+    SELECT 1
+    FROM (SELECT unnest(sqlc.narg('tag_ids')::BIGINT[]) AS tag_id) ft
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM snippet_tags st
+      WHERE st.snippet_id = s.id
+        AND st.tag_id = ft.tag_id
+    )
+  );
 
 -- name: GetTagsBySnippetIDs :many
 SELECT st.snippet_id, t.id, t.name

@@ -62,6 +62,7 @@ CREATE TABLE snippet_contributors(
 );
 
 -- Indexes for filtering by tags and contributors (junction tables)
+CREATE INDEX idx_snippets_language ON snippets (language_id);
 CREATE INDEX idx_snippet_tags_tag ON snippet_tags (tag_id, snippet_id);
 CREATE INDEX idx_snippet_contributors_contributor ON snippet_contributors (contributor_id, snippet_id);
 -- +goose StatementEnd

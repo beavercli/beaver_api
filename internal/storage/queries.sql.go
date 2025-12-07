@@ -23,10 +23,18 @@ func (q *Queries) CountLanguages(ctx context.Context) (int64, error) {
 }
 
 const countSnippetsFiltered = `-- name: CountSnippetsFiltered :one
-SELECT COUNT(DISTINCT s.id) FROM snippets s
-LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+SELECT COUNT(*) FROM snippets s
 WHERE ($1::BIGINT IS NULL OR s.language_id = $1::BIGINT)
-  AND (COALESCE($2::BIGINT[], '{}') = '{}' OR st.tag_id = ANY($2::BIGINT[]))
+  AND NOT EXISTS (
+    SELECT 1
+    FROM (SELECT unnest($2::BIGINT[]) AS tag_id) ft
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM snippet_tags st
+      WHERE st.snippet_id = s.id
+        AND st.tag_id = ft.tag_id
+    )
+  )
 `
 
 type CountSnippetsFilteredParams struct {
@@ -602,7 +610,7 @@ func (q *Queries) ListSnippetIDs(ctx context.Context) ([]int64, error) {
 }
 
 const listSnippetsFiltered = `-- name: ListSnippetsFiltered :many
-SELECT DISTINCT
+SELECT
     s.id,
     s.title,
     s.project_url,
@@ -610,9 +618,17 @@ SELECT DISTINCT
     l.name AS language_name
 FROM snippets s
 LEFT JOIN languages l ON s.language_id = l.id
-LEFT JOIN snippet_tags st ON s.id = st.snippet_id
 WHERE ($1::BIGINT IS NULL OR s.language_id = $1::BIGINT)
-  AND (COALESCE($2::BIGINT[], '{}') = '{}' OR st.tag_id = ANY($2::BIGINT[]))
+  AND NOT EXISTS (
+    SELECT 1
+    FROM (SELECT unnest($2::BIGINT[]) AS tag_id) ft
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM snippet_tags st
+      WHERE st.snippet_id = s.id
+        AND st.tag_id = ft.tag_id
+    )
+  )
 ORDER BY s.id
 OFFSET $3::INT LIMIT $4::INT
 `
