@@ -37,7 +37,7 @@ type SnippetSummary struct {
 
 type SnippetsList struct {
 	Items []SnippetSummary
-	Total int64
+	Total int
 }
 
 type User struct {

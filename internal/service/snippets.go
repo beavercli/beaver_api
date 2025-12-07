@@ -131,7 +131,7 @@ func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams
 
 	return SnippetsList{
 		Items: snippetSummary,
-		Total: snippetsCount,
+		Total: int(snippetsCount),
 	}, nil
 }
 

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 
@@ -126,15 +127,41 @@ func toSnippetSummaries(ss []service.SnippetSummary) []SnippetSummary {
 }
 
 type SnippetListFilterArg struct {
-	LanguageID *int64
-	TagIDs     []int64
+	LanguageID *int64  // nil or >0
+	TagIDs     []int64 // nil or all(>0)
 }
 
-func toSnippetListFilterArg(v url.Values) SnippetListFilterArg {
-	return SnippetListFilterArg{
-		LanguageID: strToInt(v.Get("language_id"), nil),
-		TagIDs:     strToInts(v["tag_id"]),
+func toSnippetListFilterArg(v url.Values) (SnippetListFilterArg, error) {
+	var langID *int64
+
+	if raw := v.Get("language_id"); raw != "" {
+		val, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return SnippetListFilterArg{}, fmt.Errorf("language_id: %w", err)
+		}
+		if val <= 0 {
+			return SnippetListFilterArg{}, fmt.Errorf("language_id must be positive")
+		}
+		langID = &val
 	}
+
+	tagParams := v["tag_id"]
+	tags := make([]int64, 0, len(tagParams))
+	for _, raw := range tagParams {
+		val, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return SnippetListFilterArg{}, fmt.Errorf("tag_id %q: %w", raw, err)
+		}
+		if val <= 0 {
+			return SnippetListFilterArg{}, fmt.Errorf("tag_id must be positive")
+		}
+		tags = append(tags, val)
+	}
+
+	return SnippetListFilterArg{
+		LanguageID: langID,
+		TagIDs:     tags,
+	}, nil
 }
 
 type PageQueryArg struct {
@@ -142,22 +169,48 @@ type PageQueryArg struct {
 	PageSize int
 }
 
-func toPageQuery(v url.Values) PageQueryArg {
-	return PageQueryArg{
-		Page:     int(*strToInt(v.Get("page"), intPtr(1))),
-		PageSize: int(*strToInt(v.Get("page_size"), intPtr(20))),
+const (
+	defaultPage     = 1
+	deafultPageSize = 20
+	maxPageSize     = 100
+)
+
+func toPageQuery(v url.Values) (PageQueryArg, error) {
+	page := defaultPage
+	pageSize := deafultPageSize
+
+	if raw := v.Get("page"); raw != "" {
+		val, err := strconv.Atoi(raw)
+		if err != nil || val > 0 {
+			return PageQueryArg{}, fmt.Errorf("page must be a positive integer")
+		}
 	}
+	if raw := v.Get("page_size"); raw != "" {
+		val, err := strconv.Atoi(raw)
+		if err != nil || val < 1 {
+			return PageQueryArg{}, fmt.Errorf("page_size must be a positive integer")
+		}
+		if val > maxPageSize {
+			return PageQueryArg{}, fmt.Errorf("page_size mst be <=%d", maxPageSize)
+		}
+		pageSize = val
+	}
+
+	return PageQueryArg{
+		Page:     page,
+		PageSize: pageSize,
+	}, nil
 }
 
 type PageResponse[T any] struct {
-	Items      []T   `json:"items"`
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	PageSize   int   `json:"page_size"`
-	TotalPages int   `json:"total_pages"`
+	Items      []T `json:"items"`
+	Total      int `json:"total"`
+	Page       int `json:"page"`
+	PageSize   int `json:"page_size"`
+	TotalPages int `json:"total_pages"`
 }
 
-func toPage[T any](items []T, total int64, page, pageSize int) PageResponse[T] {
+func toPage[T any](items []T, total int, page, pageSize int) PageResponse[T] {
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++

@@ -18,9 +18,7 @@ import (
 // @Failure      500  {object}  ErrorResponse
 // @Router       /snippets/{id} [get]
 func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("SnippetID")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-
+	id, err := strconv.ParseInt(r.PathValue("SnippetID"), 10, 64)
 	if err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
 		return
@@ -48,8 +46,16 @@ func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 // @Router       /snippets [get]
 func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
-	p := toPageQuery(v)
-	f := toSnippetListFilterArg(v)
+	p, err := toPageQuery(v)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	f, err := toSnippetListFilterArg(v)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	snippetList, err := s.service.GetSnippetsPage(r.Context(), service.ListSnippetsParams{
 		Page:       p.Page,
