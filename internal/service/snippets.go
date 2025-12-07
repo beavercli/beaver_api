@@ -14,7 +14,7 @@ func (s *Service) GetSnippet(ctx context.Context, id int64) (Snippet, error) {
 	var contributors []storage.GetContributorsBySnippetIDRow
 	var snippet storage.GetSnippetByIDRow
 
-	g, ctx := errgroup.WithContext(ctx)
+	g, _ := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		var err error
@@ -51,18 +51,10 @@ func (s *Service) GetSnippet(ctx context.Context, id int64) (Snippet, error) {
 }
 
 type ListSnippetsParams struct {
-	Page       int
-	PageSize   int
+	PageParam
+
 	LanguageID *int64
 	TagIDs     []int64
-}
-
-func (p ListSnippetsParams) Offset() int {
-	return (p.Page - 1) * p.PageSize
-}
-
-func (p ListSnippetsParams) Limit() int {
-	return p.PageSize
 }
 
 func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams) (SnippetsList, error) {

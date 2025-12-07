@@ -5,6 +5,11 @@ type Tag struct {
 	Name string
 }
 
+type TagList struct {
+	Items []Tag
+	Total int
+}
+
 type Language struct {
 	ID   int64
 	Name string

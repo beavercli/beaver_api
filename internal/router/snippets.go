@@ -58,8 +58,10 @@ func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	snippetList, err := s.service.GetSnippetsPage(r.Context(), service.ListSnippetsParams{
-		Page:       p.Page,
-		PageSize:   p.PageSize,
+		PageParam: service.PageParam{
+			Page:     p.Page,
+			PageSize: p.PageSize,
+		},
 		LanguageID: f.LanguageID,
 		TagIDs:     f.TagIDs,
 	})
