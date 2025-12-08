@@ -14,7 +14,7 @@ import (
 // @Param        page_size  query  int  false  "Items per page"  default(20)
 // @Success      200  {object}  LanguagesPageResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /languages [get]
+// @Router       /api/v1/languages [get]
 func (s *server) handleListLanguages(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	page, err := toPageQuery(query)

@@ -26,8 +26,9 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 	mux.HandleFunc("GET /api/v1/snippets", s.handleListSnippets)
 	mux.HandleFunc("POST /api/v1/snippets", s.handleCreateSnippet) // todo
 
-	mux.HandleFunc("GET /api/v1/tags", s.handleListTags)           // todo
-	mux.HandleFunc("GET /api/v1/languages", s.handleListLanguages) // todo
+	mux.HandleFunc("GET /api/v1/tags", s.handleListTags)
+	mux.HandleFunc("GET /api/v1/languages", s.handleListLanguages)
+	mux.HandleFunc("GET /api/v1/contributors", s.handleListContributors)
 
 	mux.HandleFunc("GET /auth/github/login", s.handleGithubLogin)       // todo
 	mux.HandleFunc("GET /auth/github/callback", s.handleGithubCallback) // todo

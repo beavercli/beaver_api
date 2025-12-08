@@ -21,9 +21,7 @@ import (
 // @title           Beaver API
 // @version         1.0
 // @description     Code snippets API
-
 // @host      localhost:8080
-// @BasePath  /api/v1
 func main() {
 	ctx := context.Background()
 	cfg := config.New()

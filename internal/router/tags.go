@@ -14,7 +14,7 @@ import (
 // @Param        page_size  query  int  false  "Items per page"  default(20)
 // @Success      200  {object}  TagsPageResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /tags [get]
+// @Router       /api/v1/tags [get]
 func (s *server) handleListTags(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	page, err := toPageQuery(query)

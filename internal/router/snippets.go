@@ -16,7 +16,7 @@ import (
 // @Failure      400  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /snippets/{id} [get]
+// @Router       /api/v1/snippets/{id} [get]
 func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("SnippetID"), 10, 64)
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 // @Param        tag_id       query  []int  false  "Filter by tag IDs (repeat: tag_id=1&tag_id=2)"  collectionFormat(multi)
 // @Success      200  {object}  SnippetsPageResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /snippets [get]
+// @Router       /api/v1/snippets [get]
 func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
 	p, err := toPageQuery(v)
@@ -84,7 +84,7 @@ func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 // @Success      201  {object}  Snippet
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /snippets [post]
+// @Router       /api/v1/snippets [post]
 func (s *server) handleCreateSnippet(w http.ResponseWriter, r *http.Request) {
 
 }
