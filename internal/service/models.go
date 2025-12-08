@@ -26,6 +26,10 @@ type Contributor struct {
 	LastName  string
 	Email     string
 }
+type ContributorList struct {
+	Items []Contributor
+	Total int
+}
 
 type Snippet struct {
 	ID           int64

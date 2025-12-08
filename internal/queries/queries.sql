@@ -51,6 +51,9 @@ SELECT id FROM contributors WHERE email=$1;
 -- name: DeleteContributorsExcept :exec
 DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
+-- name: CountContributors :one
+SELECT COUNT(*) FROM contributors;
+
 -- Snippets
 
 -- name: UpsertSnippet :one

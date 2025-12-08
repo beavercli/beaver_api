@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countContributors = `-- name: CountContributors :one
+SELECT COUNT(*) FROM contributors
+`
+
+func (q *Queries) CountContributors(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countContributors)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countLanguages = `-- name: CountLanguages :one
 SELECT COUNT(*) FROM languages
 `
