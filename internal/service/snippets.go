@@ -41,7 +41,7 @@ func (s *Service) GetSnippet(ctx context.Context, id int64) (Snippet, error) {
 		Title:      snippet.Title.String,
 		Code:       snippet.Code.String,
 		ProjectURL: snippet.ProjectUrl.String,
-		Language: &Language{
+		Language: Language{
 			ID:   snippet.LanguageID.Int64,
 			Name: snippet.LanguageName.String,
 		},
@@ -113,7 +113,7 @@ func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams
 			ID:         s.ID,
 			Title:      s.Title.String,
 			ProjectURL: s.ProjectUrl.String,
-			Language: &Language{
+			Language: Language{
 				ID:   s.LanguageID.Int64,
 				Name: s.LanguageName.String,
 			},

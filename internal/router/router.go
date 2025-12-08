@@ -1,7 +1,6 @@
 package router
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/beavercli/beaver_api/common/config"
@@ -50,6 +49,5 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 // @Success      200  {string}  string  "healthy"
 // @Router       /health [get]
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "healthy")
+	jsonResponse(w, http.StatusOK, MessageResponse{Message: "healthy"})
 }

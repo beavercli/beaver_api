@@ -15,6 +15,11 @@ type Language struct {
 	Name string
 }
 
+type LanguageList struct {
+	Items []Language
+	Total int
+}
+
 type Contributor struct {
 	ID        int64
 	FirstName string
@@ -27,7 +32,7 @@ type Snippet struct {
 	Title        string
 	Code         string
 	ProjectURL   string
-	Language     *Language
+	Language     Language
 	Tags         []Tag
 	Contributors []Contributor
 }
@@ -36,7 +41,7 @@ type SnippetSummary struct {
 	ID         int64
 	Title      string
 	ProjectURL string
-	Language   *Language
+	Language   Language
 	Tags       []Tag
 }
 

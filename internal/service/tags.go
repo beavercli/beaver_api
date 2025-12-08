@@ -7,11 +7,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type TagsPageParam struct {
-	Page     int
-	PageSize int
-}
-
 func (s *Service) GetTagsPage(ctx context.Context, p PageParam) (TagList, error) {
 	var tags []storage.Tag
 	var total int64

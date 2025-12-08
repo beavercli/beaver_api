@@ -33,15 +33,19 @@ type Language struct {
 	Name string `json:"name"`
 }
 
-func toLanguage(l *service.Language) *Language {
-	if l == nil {
-		return nil
-	}
-
-	return &Language{
+func toLanguage(l service.Language) Language {
+	return Language{
 		ID:   strconv.FormatInt(l.ID, 10),
 		Name: l.Name,
 	}
+}
+
+func toLanguages(ls []service.Language) []Language {
+	langs := make([]Language, len(ls))
+	for i, l := range ls {
+		langs[i] = toLanguage(l)
+	}
+	return langs
 }
 
 type Contributor struct {
@@ -73,7 +77,7 @@ type Snippet struct {
 	Title        string        `json:"title"`
 	Code         string        `json:"code"`
 	ProjectURL   string        `json:"project_url,omitempty"`
-	Language     *Language     `json:"language,omitempty"`
+	Language     Language      `json:"language,omitempty"`
 	Tags         []Tag         `json:"tags"`
 	Contributors []Contributor `json:"contributors"`
 }
@@ -101,11 +105,11 @@ type MessageResponse struct {
 }
 
 type SnippetSummary struct {
-	ID         string    `json:"id"`
-	Title      string    `json:"title"`
-	ProjectURL string    `json:"project_url,omitempty"`
-	Language   *Language `json:"language,omitempty"`
-	Tags       []Tag     `json:"tags"`
+	ID         string   `json:"id"`
+	Title      string   `json:"title"`
+	ProjectURL string   `json:"project_url,omitempty"`
+	Language   Language `json:"language,omitempty"`
+	Tags       []Tag    `json:"tags"`
 }
 
 func toSnippetSummary(s service.SnippetSummary) SnippetSummary {
