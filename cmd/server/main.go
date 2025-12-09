@@ -15,7 +15,6 @@ import (
 	_ "github.com/beavercli/beaver_api/docs"
 	"github.com/beavercli/beaver_api/internal/router"
 	"github.com/beavercli/beaver_api/internal/service"
-	"github.com/beavercli/beaver_api/internal/storage"
 )
 
 // @title           Beaver API
@@ -32,8 +31,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	storage := storage.New(pool)
-	service := service.New(storage)
+	service := service.New(pool)
 	server := router.New(cfg.Server, service)
 
 	go func() {

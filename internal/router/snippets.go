@@ -86,5 +86,15 @@ func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  ErrorResponse
 // @Router       /api/v1/snippets [post]
 func (s *server) handleCreateSnippet(w http.ResponseWriter, r *http.Request) {
-
+	p, err := toCreateSnippetRequestBody(r)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	snippet, err := s.service.CreateSnippet(r.Context(), toCreateSnippetParams(p))
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	jsonResponse(w, http.StatusOK, snippet)
 }

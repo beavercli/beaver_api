@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/beavercli/beaver_api/internal/storage"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/sync/errgroup"
 )
@@ -125,6 +126,44 @@ func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams
 		Items: snippetSummary,
 		Total: int(snippetsCount),
 	}, nil
+}
+
+type CreateContributorParam struct {
+	FirstName string
+	LastName  string
+	Email     string
+}
+
+type CreateTagParam struct {
+	Name string
+}
+
+type CreateLanguageParam struct {
+	Name string
+}
+type CreateSnippetParam struct {
+	Title        string
+	Code         string
+	ProjectURL   string
+	Language     CreateLanguageParam
+	Tags         []CreateTagParam
+	Contributors []CreateContributorParam
+}
+
+func (s *Service) CreateSnippet(ctx context.Context, csp CreateSnippetParam) (Snippet, error) {
+	txOptions := pgx.TxOptions{
+		IsoLevel:       pgx.ReadCommitted,
+		AccessMode:     pgx.ReadWrite,
+		DeferrableMode: pgx.NotDeferrable,
+	}
+	err := s.inTx(ctx, txOptions, func(db *storage.Queries) error {
+		return nil
+	})
+
+	if err != nil {
+		return Snippet{}, err
+	}
+	return Snippet{}, nil
 }
 
 func mapTags(rows []storage.GetTagsBySnippetIDsRow) map[int64][]Tag {
