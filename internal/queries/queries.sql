@@ -9,11 +9,19 @@ INSERT INTO tags (name) VALUES($1) ON CONFLICT (name) DO NOTHING;
 -- name: GetTagIDByName :one
 SELECT id FROM tags WHERE name=$1;
 
+-- name: GetTagIDsByNames :many
+SELECT id, name FROM tags WHERE name = ANY(sqlc.arg('names')::text[]);
+
 -- name: DeleteTagsExcept :exec
 DELETE FROM tags WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
 -- name: CountTags :one
 SELECT COUNT(*) FROM tags;
+
+-- name: BulkUpsertTags :exec
+INSERT INTO tags (name)
+SELECT unnest(sqlc.arg('names')::text[])
+ON CONFLICT (name) DO NOTHING;
 
 -- Languages
 
@@ -48,11 +56,23 @@ INSERT INTO contributors (first_name, last_name, email) VALUES($1, $2, $3) ON CO
 -- name: GetContributorIDByEmail :one
 SELECT id FROM contributors WHERE email=$1;
 
+-- name: GetContributorIDsByEmails :many
+SELECT id, email FROM contributors WHERE email = ANY(sqlc.arg('emails')::text[]);
+
 -- name: DeleteContributorsExcept :exec
 DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 
 -- name: CountContributors :one
 SELECT COUNT(*) FROM contributors;
+
+-- name: BulkUpsertContributors :exec
+INSERT INTO contributors (first_name, last_name, email)
+SELECT
+    (sqlc.arg('first_names')::text[])[i] AS first_name,
+    (sqlc.arg('last_names')::text[])[i] AS last_name,
+    (sqlc.arg('emails')::text[])[i] AS email
+FROM generate_subscripts(sqlc.arg('first_names')::text[], 1) AS s(i)
+ON CONFLICT (email) DO NOTHING;
 
 -- Snippets
 

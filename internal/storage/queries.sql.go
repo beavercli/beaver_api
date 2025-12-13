@@ -11,6 +11,38 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const bulkUpsertContributors = `-- name: BulkUpsertContributors :exec
+INSERT INTO contributors (first_name, last_name, email)
+SELECT
+    ($1::text[])[i] AS first_name,
+    ($2::text[])[i] AS last_name,
+    ($3::text[])[i] AS email
+FROM generate_subscripts($1::text[], 1) AS s(i)
+ON CONFLICT (email) DO NOTHING
+`
+
+type BulkUpsertContributorsParams struct {
+	FirstNames []string
+	LastNames  []string
+	Emails     []string
+}
+
+func (q *Queries) BulkUpsertContributors(ctx context.Context, arg BulkUpsertContributorsParams) error {
+	_, err := q.db.Exec(ctx, bulkUpsertContributors, arg.FirstNames, arg.LastNames, arg.Emails)
+	return err
+}
+
+const bulkUpsertTags = `-- name: BulkUpsertTags :exec
+INSERT INTO tags (name)
+SELECT unnest($1::text[])
+ON CONFLICT (name) DO NOTHING
+`
+
+func (q *Queries) BulkUpsertTags(ctx context.Context, names []string) error {
+	_, err := q.db.Exec(ctx, bulkUpsertTags, names)
+	return err
+}
+
 const countContributors = `-- name: CountContributors :one
 SELECT COUNT(*) FROM contributors
 `
@@ -116,6 +148,35 @@ func (q *Queries) GetContributorIDByEmail(ctx context.Context, email pgtype.Text
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getContributorIDsByEmails = `-- name: GetContributorIDsByEmails :many
+SELECT id, email FROM contributors WHERE email = ANY($1::text[])
+`
+
+type GetContributorIDsByEmailsRow struct {
+	ID    int64
+	Email pgtype.Text
+}
+
+func (q *Queries) GetContributorIDsByEmails(ctx context.Context, emails []string) ([]GetContributorIDsByEmailsRow, error) {
+	rows, err := q.db.Query(ctx, getContributorIDsByEmails, emails)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetContributorIDsByEmailsRow
+	for rows.Next() {
+		var i GetContributorIDsByEmailsRow
+		if err := rows.Scan(&i.ID, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getContributorsBySnippetID = `-- name: GetContributorsBySnippetID :many
@@ -257,6 +318,35 @@ func (q *Queries) GetTagIDByName(ctx context.Context, name pgtype.Text) (int64, 
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getTagIDsByNames = `-- name: GetTagIDsByNames :many
+SELECT id, name FROM tags WHERE name = ANY($1::text[])
+`
+
+type GetTagIDsByNamesRow struct {
+	ID   int64
+	Name pgtype.Text
+}
+
+func (q *Queries) GetTagIDsByNames(ctx context.Context, names []string) ([]GetTagIDsByNamesRow, error) {
+	rows, err := q.db.Query(ctx, getTagIDsByNames, names)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTagIDsByNamesRow
+	for rows.Next() {
+		var i GetTagIDsByNamesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTagsBySnippetID = `-- name: GetTagsBySnippetID :many
