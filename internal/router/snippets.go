@@ -89,9 +89,10 @@ func (s *server) handleCreateSnippet(w http.ResponseWriter, r *http.Request) {
 	p, err := toCreateSnippetRequestBody(r)
 	if err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
-	snippet, err := s.service.CreateSnippet(r.Context(), toCreateSnippetParams(p))
+	snippet, err := s.service.InjestSnippet(r.Context(), toCreateSnippetParams(p))
 	if err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
 		return

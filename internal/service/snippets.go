@@ -139,11 +139,9 @@ type CreateContributorParam struct {
 	LastName  string
 	Email     string
 }
-
 type CreateTagParam struct {
 	Name string
 }
-
 type CreateLanguageParam struct {
 	Name string
 }
@@ -159,13 +157,26 @@ type CreateSnippetParam struct {
 	Contributors []CreateContributorParam
 }
 
-func (s *Service) CreateSnippet(ctx context.Context, csp CreateSnippetParam) (Snippet, error) {
+func (s *Service) InjestSnippet(ctx context.Context, csp CreateSnippetParam) (Snippet, error) {
 	txOptions := pgx.TxOptions{
 		IsoLevel:       pgx.ReadCommitted,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	}
+
 	err := s.inTx(ctx, txOptions, func(db *storage.Queries) error {
+		if err := s.uploadSnippetRelatedObjects(ctx, &csp); err != nil {
+			return err
+		}
+		m, err := s.getMappingRelatedObjects(ctx, &csp)
+		if err != nil {
+			return err
+		}
+		// TODO
+		fmt.Println(m)
+
+		// get mappings to create the snippet
+
 		return nil
 	})
 
@@ -173,6 +184,103 @@ func (s *Service) CreateSnippet(ctx context.Context, csp CreateSnippetParam) (Sn
 		return Snippet{}, err
 	}
 	return Snippet{}, nil
+}
+
+func (s *Service) uploadSnippetRelatedObjects(ctx context.Context, cs *CreateSnippetParam) error {
+	g, upsertCtx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		if err := s.db.UpsertLanguage(upsertCtx, pgtype.Text{String: cs.Language.Name, Valid: true}); err != nil {
+			return err
+		}
+		return nil
+	})
+	g.Go(func() error {
+		tag_names := make([]string, len(cs.Tags))
+		for i, t := range cs.Tags {
+			tag_names[i] = t.Name
+		}
+
+		if err := s.db.BulkUpsertTags(upsertCtx, tag_names); err != nil {
+			return err
+		}
+		return nil
+	})
+	g.Go(func() error {
+		contributorsParams := storage.BulkUpsertContributorsParams{
+			FirstNames: make([]string, len(cs.Contributors)),
+			LastNames:  make([]string, len(cs.Contributors)),
+			Emails:     make([]string, len(cs.Contributors)),
+		}
+		for i, c := range cs.Contributors {
+			contributorsParams.FirstNames[i] = c.FirstName
+			contributorsParams.LastNames[i] = c.LastName
+			contributorsParams.Emails[i] = c.Email
+		}
+		if err := s.db.BulkUpsertContributors(upsertCtx, contributorsParams); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
+type snippetMapping struct {
+	tagsIDsByName     map[string]int64
+	langIDsByName     map[string]int64
+	contribsIDsByName map[string]int64
+}
+
+func (s *Service) getMappingRelatedObjects(ctx context.Context, cs *CreateSnippetParam) (snippetMapping, error) {
+	m := snippetMapping{
+		tagsIDsByName:     make(map[string]int64),
+		langIDsByName:     make(map[string]int64),
+		contribsIDsByName: make(map[string]int64),
+	}
+	g, ctxMapping := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		tag_names := make([]string, len(cs.Tags))
+		for i, t := range cs.Tags {
+			tag_names[i] = t.Name
+		}
+		tags, err := s.db.GetTagIDsByNames(ctxMapping, tag_names)
+		if err != nil {
+			return err
+		}
+		for _, t := range tags {
+			m.tagsIDsByName[t.Name.String] = t.ID
+		}
+		return nil
+	})
+	g.Go(func() error {
+		emails := make([]string, len(cs.Contributors))
+		for i, c := range cs.Contributors {
+			emails[i] = c.Email
+		}
+		cs, err := s.db.GetContributorIDsByEmails(ctxMapping, emails)
+		if err != nil {
+			return err
+		}
+		for _, c := range cs {
+			m.contribsIDsByName[c.Email.String] = c.ID
+		}
+		return nil
+	})
+	g.Go(func() error {
+		id, err := s.db.GetLanguageIDByName(ctxMapping, pgtype.Text{String: cs.Language.Name, Valid: true})
+		if err != nil {
+			return err
+		}
+		m.langIDsByName[cs.Language.Name] = id
+		return nil
+	})
+	if err := g.Wait(); err != nil {
+		return snippetMapping{}, err
+	}
+	return m, nil
 }
 
 func mapTags(rows []storage.GetTagsBySnippetIDsRow) map[int64][]Tag {
