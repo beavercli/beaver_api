@@ -192,6 +192,9 @@ SELECT
     s.title,
     s.code,
     s.project_url,
+    s.git_repo_url,
+    s.git_file_path,
+    s.git_version,
     s.created_at,
     s.updated_at,
     l.id AS language_id,
@@ -206,6 +209,9 @@ type GetSnippetByIDRow struct {
 	Title        pgtype.Text
 	Code         pgtype.Text
 	ProjectUrl   pgtype.Text
+	GitRepoUrl   pgtype.Text
+	GitFilePath  pgtype.Text
+	GitVersion   pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	LanguageID   pgtype.Int8
@@ -220,6 +226,9 @@ func (q *Queries) GetSnippetByID(ctx context.Context, id int64) (GetSnippetByIDR
 		&i.Title,
 		&i.Code,
 		&i.ProjectUrl,
+		&i.GitRepoUrl,
+		&i.GitFilePath,
+		&i.GitVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.LanguageID,
@@ -625,6 +634,9 @@ SELECT
     s.id,
     s.title,
     s.project_url,
+    s.git_repo_url,
+    s.git_file_path,
+    s.git_version,
     l.id AS language_id,
     l.name AS language_name
 FROM snippets s
@@ -655,6 +667,9 @@ type ListSnippetsFilteredRow struct {
 	ID           int64
 	Title        pgtype.Text
 	ProjectUrl   pgtype.Text
+	GitRepoUrl   pgtype.Text
+	GitFilePath  pgtype.Text
+	GitVersion   pgtype.Text
 	LanguageID   pgtype.Int8
 	LanguageName pgtype.Text
 }
@@ -677,6 +692,9 @@ func (q *Queries) ListSnippetsFiltered(ctx context.Context, arg ListSnippetsFilt
 			&i.ID,
 			&i.Title,
 			&i.ProjectUrl,
+			&i.GitRepoUrl,
+			&i.GitFilePath,
+			&i.GitVersion,
 			&i.LanguageID,
 			&i.LanguageName,
 		); err != nil {
@@ -776,19 +794,30 @@ func (q *Queries) UpsertLanguage(ctx context.Context, name pgtype.Text) error {
 
 const upsertSnippet = `-- name: UpsertSnippet :one
 
-INSERT INTO snippets (title, code, project_url, language_id, user_id, created_at)
-VALUES($1, $2, $3, $4, $5, $6)
-ON CONFLICT (title) DO UPDATE SET created_at = EXCLUDED.created_at
+INSERT INTO snippets (title, code, project_url, git_repo_url, git_file_path, git_version, language_id, user_id, created_at)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (title) DO UPDATE SET
+    code = EXCLUDED.code,
+    project_url = EXCLUDED.project_url,
+    git_repo_url = EXCLUDED.git_repo_url,
+    git_file_path = EXCLUDED.git_file_path,
+    git_version = EXCLUDED.git_version,
+    language_id = EXCLUDED.language_id,
+    user_id = EXCLUDED.user_id,
+    created_at = EXCLUDED.created_at
 RETURNING id
 `
 
 type UpsertSnippetParams struct {
-	Title      pgtype.Text
-	Code       pgtype.Text
-	ProjectUrl pgtype.Text
-	LanguageID pgtype.Int8
-	UserID     pgtype.Int8
-	CreatedAt  pgtype.Timestamptz
+	Title       pgtype.Text
+	Code        pgtype.Text
+	ProjectUrl  pgtype.Text
+	GitRepoUrl  pgtype.Text
+	GitFilePath pgtype.Text
+	GitVersion  pgtype.Text
+	LanguageID  pgtype.Int8
+	UserID      pgtype.Int8
+	CreatedAt   pgtype.Timestamptz
 }
 
 // Snippets
@@ -797,6 +826,9 @@ func (q *Queries) UpsertSnippet(ctx context.Context, arg UpsertSnippetParams) (i
 		arg.Title,
 		arg.Code,
 		arg.ProjectUrl,
+		arg.GitRepoUrl,
+		arg.GitFilePath,
+		arg.GitVersion,
 		arg.LanguageID,
 		arg.UserID,
 		arg.CreatedAt,

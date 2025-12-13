@@ -21,6 +21,9 @@ type Snippet struct {
 	ID           string        `json:"id"`
 	Title        string        `json:"title"`
 	Code         string        `json:"code"`
+	GitRepoURL   string        `json:"git_repo_url"`
+	GitPath      string        `json:"git_path"`
+	GitVersion   string        `json:"git_version"`
 	ProjectURL   string        `json:"project_url,omitempty"`
 	Language     Language      `json:"language,omitempty"`
 	Tags         []Tag         `json:"tags"`
@@ -37,6 +40,9 @@ type SnippetSummary struct {
 	ID         string   `json:"id"`
 	Title      string   `json:"title"`
 	ProjectURL string   `json:"project_url,omitempty"`
+	GitRepoURL string   `json:"git_repo_url"`
+	GitPath    string   `json:"git_path"`
+	GitVersion string   `json:"git_version"`
 	Language   Language `json:"language,omitempty"`
 	Tags       []Tag    `json:"tags"`
 }
@@ -63,6 +69,9 @@ type CreateSnippetRequest struct {
 	Title        string                     `json:"title"`
 	Code         string                     `json:"code"`
 	ProjectURL   string                     `json:"project_url,omitempty"`
+	GitRepoURL   string                     `json:"git_repo_url"`
+	GitPath      string                     `json:"git_path"`
+	GitVersion   string                     `json:"git_version"`
 	Language     CreateLanguageRequest      `json:"language"`
 	Tags         []CreateTagRequest         `json:"tags"`
 	Contributors []CreateContributorRequest `json:"contributors"`

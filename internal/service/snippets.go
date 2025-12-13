@@ -42,6 +42,9 @@ func (s *Service) GetSnippet(ctx context.Context, id int64) (Snippet, error) {
 		Title:      snippet.Title.String,
 		Code:       snippet.Code.String,
 		ProjectURL: snippet.ProjectUrl.String,
+		GitRepoURL: snippet.GitRepoUrl.String,
+		GitPath:    snippet.GitFilePath.String,
+		GitVersion: snippet.GitVersion.String,
 		Language: Language{
 			ID:   snippet.LanguageID.Int64,
 			Name: snippet.LanguageName.String,
@@ -98,8 +101,8 @@ func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams
 	}
 
 	snippetIDs := make([]int64, len(snippets))
-	for _, s := range snippets {
-		snippetIDs = append(snippetIDs, s.ID)
+	for i, s := range snippets {
+		snippetIDs[i] = s.ID
 	}
 
 	tags, err := s.db.GetTagsBySnippetIDs(ctx, snippetIDs)
@@ -114,6 +117,9 @@ func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams
 			ID:         s.ID,
 			Title:      s.Title.String,
 			ProjectURL: s.ProjectUrl.String,
+			GitRepoURL: s.GitRepoUrl.String,
+			GitPath:    s.GitFilePath.String,
+			GitVersion: s.GitVersion.String,
 			Language: Language{
 				ID:   s.LanguageID.Int64,
 				Name: s.LanguageName.String,
@@ -145,6 +151,9 @@ type CreateSnippetParam struct {
 	Title        string
 	Code         string
 	ProjectURL   string
+	GitRepoURL   string
+	GitPath      string
+	GitVersion   string
 	Language     CreateLanguageParam
 	Tags         []CreateTagParam
 	Contributors []CreateContributorParam

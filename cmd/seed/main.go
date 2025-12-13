@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/beavercli/beaver_api/common/config"
@@ -146,6 +147,28 @@ func main() {
 	fmt.Println("Done!")
 }
 
+func fileExtForLang(lang string) string {
+	switch strings.ToLower(lang) {
+	case "go":
+		return "go"
+	case "python":
+		return "py"
+	case "c":
+		return "c"
+	default:
+		return "txt"
+	}
+}
+
+func randomSHA() string {
+	const hex = "0123456789abcdef"
+	b := make([]byte, 40) // short SHA-like string
+	for i := range b {
+		b[i] = hex[rand.Intn(len(hex))]
+	}
+	return string(b)
+}
+
 func seedLanguages(ctx context.Context, q *storage.Queries) {
 	fmt.Printf("Inserting %d languages...\n", len(languages))
 	for _, lang := range languages {
@@ -255,6 +278,9 @@ func seedSnippets(ctx context.Context, q *storage.Queries) {
 
 		title := fmt.Sprintf("%s-snippet-%d-%d", lang, i, time.Now().UnixNano())
 		projectURL := fmt.Sprintf("https://github.com/example/project-%d", rand.Intn(100))
+		gitRepoURL := fmt.Sprintf("https://github.com/example/%s-repo", strings.ToLower(lang))
+		gitPath := fmt.Sprintf("snippets/%s/file-%d-%d.%s", lang, i, rand.Intn(1000), fileExtForLang(lang))
+		gitVersion := randomSHA()
 
 		var userID pgtype.Int8
 		if rand.Float32() < 0.7 && len(userIDs) > 0 {
@@ -262,12 +288,15 @@ func seedSnippets(ctx context.Context, q *storage.Queries) {
 		}
 
 		snippetID, err := q.UpsertSnippet(ctx, storage.UpsertSnippetParams{
-			Title:      pgtype.Text{String: title, Valid: true},
-			Code:       pgtype.Text{String: code, Valid: true},
-			ProjectUrl: pgtype.Text{String: projectURL, Valid: true},
-			LanguageID: pgtype.Int8{Int64: langID, Valid: true},
-			UserID:     userID,
-			CreatedAt:  pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			Title:       pgtype.Text{String: title, Valid: true},
+			Code:        pgtype.Text{String: code, Valid: true},
+			ProjectUrl:  pgtype.Text{String: projectURL, Valid: true},
+			GitRepoUrl:  pgtype.Text{String: gitRepoURL, Valid: true},
+			GitFilePath: pgtype.Text{String: gitPath, Valid: true},
+			GitVersion:  pgtype.Text{String: gitVersion, Valid: true},
+			LanguageID:  pgtype.Int8{Int64: langID, Valid: true},
+			UserID:      userID,
+			CreatedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		})
 		if err != nil {
 			panic(err)

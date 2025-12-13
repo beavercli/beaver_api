@@ -25,14 +25,17 @@ type Language struct {
 }
 
 type Snippet struct {
-	ID         int64
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-	Title      pgtype.Text
-	Code       pgtype.Text
-	ProjectUrl pgtype.Text
-	LanguageID pgtype.Int8
-	UserID     pgtype.Int8
+	ID          int64
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	Title       pgtype.Text
+	Code        pgtype.Text
+	ProjectUrl  pgtype.Text
+	GitRepoUrl  pgtype.Text
+	GitFilePath pgtype.Text
+	GitVersion  pgtype.Text
+	LanguageID  pgtype.Int8
+	UserID      pgtype.Int8
 }
 
 type SnippetContributor struct {

@@ -36,6 +36,9 @@ type Snippet struct {
 	Title        string
 	Code         string
 	ProjectURL   string
+	GitRepoURL   string
+	GitPath      string
+	GitVersion   string
 	Language     Language
 	Tags         []Tag
 	Contributors []Contributor
@@ -45,6 +48,9 @@ type SnippetSummary struct {
 	ID         int64
 	Title      string
 	ProjectURL string
+	GitRepoURL string
+	GitPath    string
+	GitVersion string
 	Language   Language
 	Tags       []Tag
 }
