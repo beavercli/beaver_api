@@ -18,18 +18,37 @@ DELETE FROM tags WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 -- name: CountTags :one
 SELECT COUNT(*) FROM tags;
 
--- name: BulkUpsertTags :exec
-INSERT INTO tags (name)
-SELECT unnest(sqlc.arg('names')::text[])
-ON CONFLICT (name) DO NOTHING;
+-- name: BulkUpsertTags :many
+WITH input AS (
+    SELECT unnest(sqlc.arg('names')::text[]) AS name
+),
+ins AS (
+    INSERT INTO tags (name)
+    SELECT name FROM input
+    ON CONFLICT (name) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT t.id
+FROM tags t
+JOIN input i ON t.name = i.name;
 
 -- Languages
 
 -- name: ListLanguages :many
 SELECT * FROM languages OFFSET $1 LIMIT $2;
 
--- name: UpsertLanguage :exec
-INSERT INTO languages (name) VALUES($1) ON CONFLICT (name) DO NOTHING;
+-- name: UpsertLanguage :one
+WITH ins AS (
+    INSERT INTO languages (name)
+    VALUES ($1)
+    ON CONFLICT (name) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM languages WHERE name = $1;
 
 -- name: GetLanguageIDByName :one
 SELECT id FROM languages WHERE name=$1;
@@ -65,21 +84,32 @@ DELETE FROM contributors WHERE NOT (id = ANY(sqlc.narg('ids')::BIGINT[]));
 -- name: CountContributors :one
 SELECT COUNT(*) FROM contributors;
 
--- name: BulkUpsertContributors :exec
-INSERT INTO contributors (first_name, last_name, email)
-SELECT
-    (sqlc.arg('first_names')::text[])[i] AS first_name,
-    (sqlc.arg('last_names')::text[])[i] AS last_name,
-    (sqlc.arg('emails')::text[])[i] AS email
-FROM generate_subscripts(sqlc.arg('first_names')::text[], 1) AS s(i)
-ON CONFLICT (email) DO NOTHING;
+-- name: BulkUpsertContributors :many
+WITH input AS (
+    SELECT
+        (sqlc.arg('first_names')::text[])[i] AS first_name,
+        (sqlc.arg('last_names')::text[])[i] AS last_name,
+        (sqlc.arg('emails')::text[])[i] AS email
+    FROM generate_subscripts(sqlc.arg('emails')::text[], 1) AS s(i)
+),
+ins AS (
+    INSERT INTO contributors (first_name, last_name, email)
+    SELECT first_name, last_name, email FROM input
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT c.id
+FROM contributors c
+JOIN input i ON c.email = i.email;
 
 -- Snippets
 
 -- name: UpsertSnippet :one
 INSERT INTO snippets (title, code, project_url, git_repo_url, git_file_path, git_version, language_id, user_id, created_at)
 VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
-ON CONFLICT (title) DO UPDATE SET
+ON CONFLICT (git_repo_url, git_file_path) DO UPDATE SET
     code = EXCLUDED.code,
     project_url = EXCLUDED.project_url,
     git_repo_url = EXCLUDED.git_repo_url,
@@ -102,11 +132,31 @@ DELETE FROM snippets WHERE created_at < $1;
 -- name: LinkSnippetTag :exec
 INSERT INTO snippet_tags (snippet_id, tag_id) VALUES($1, $2) ON CONFLICT (snippet_id, tag_id) DO NOTHING;
 
+-- name: BulkLinkSnippetTags :exec
+INSERT INTO snippet_tags (snippet_id, tag_id)
+SELECT sqlc.arg('snippet_id')::bigint, unnest(sqlc.arg('tag_ids')::bigint[])
+ON CONFLICT (snippet_id, tag_id) DO NOTHING;
+
+-- name: DeleteSnippetTagsExcept :exec
+DELETE FROM snippet_tags
+WHERE snippet_id = sqlc.arg('snippet_id')::bigint
+  AND NOT (tag_id = ANY(sqlc.arg('tag_ids')::bigint[]));
+
 -- name: ListLinkedTagIDs :many
 SELECT DISTINCT(tag_id) FROM snippet_tags;
 
 -- name: LinkSnippetContributor :exec
 INSERT INTO snippet_contributors (snippet_id, contributor_id) VALUES($1, $2) ON CONFLICT (snippet_id, contributor_id) DO NOTHING;
+
+-- name: BulkLinkSnippetContributors :exec
+INSERT INTO snippet_contributors (snippet_id, contributor_id)
+SELECT sqlc.arg('snippet_id')::bigint, unnest(sqlc.arg('contributor_ids')::bigint[])
+ON CONFLICT (snippet_id, contributor_id) DO NOTHING;
+
+-- name: DeleteSnippetContributorsExcept :exec
+DELETE FROM snippet_contributors
+WHERE snippet_id = sqlc.arg('snippet_id')::bigint
+  AND NOT (contributor_id = ANY(sqlc.arg('contributor_ids')::bigint[]));
 
 -- name: ListLinkedContributorIDs :many
 SELECT DISTINCT(contributor_id) FROM snippet_contributors;

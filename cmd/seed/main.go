@@ -171,8 +171,10 @@ func randomSHA() string {
 
 func seedLanguages(ctx context.Context, q *storage.Queries) {
 	fmt.Printf("Inserting %d languages...\n", len(languages))
+	var err error
 	for _, lang := range languages {
-		if err := q.UpsertLanguage(ctx, pgtype.Text{String: lang, Valid: true}); err != nil {
+		_, err = q.UpsertLanguage(ctx, pgtype.Text{String: lang, Valid: true})
+		if err != nil {
 			panic(err)
 		}
 	}

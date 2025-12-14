@@ -16,7 +16,7 @@ import (
 // @Failure      400  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /api/v1/snippets/{id} [get]
+// @Router       /api/v1/snippets/{SnippetID} [get]
 func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("SnippetID"), 10, 64)
 	if err != nil {
@@ -80,22 +80,22 @@ func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 // @Tags         snippets
 // @Accept       json
 // @Produce      json
-// @Param        body  body  CreateSnippetRequest  true  "Snippet data"
-// @Success      201  {object}  Snippet
+// @Param        body  body  IngestSnippetRequest  true  "Snippet data"
+// @Success      201
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
 // @Router       /api/v1/snippets [post]
-func (s *server) handleCreateSnippet(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleIngestSnippet(w http.ResponseWriter, r *http.Request) {
 	p, err := toCreateSnippetRequestBody(r)
 	if err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
 
 		return
 	}
-	snippet, err := s.service.InjestSnippet(r.Context(), toCreateSnippetParams(p))
-	if err != nil {
+
+	if err := s.service.InjestSnippet(r.Context(), toCreateSnippetParams(p)); err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	jsonResponse(w, http.StatusOK, snippet)
+	w.WriteHeader(http.StatusCreated)
 }

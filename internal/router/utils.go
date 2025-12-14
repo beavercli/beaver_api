@@ -137,20 +137,20 @@ func toSnippetListFilterArg(v url.Values) (SnippetListFilterArg, error) {
 	}, nil
 }
 
-func toCreateSnippetRequestBody(r *http.Request) (CreateSnippetRequest, error) {
+func toCreateSnippetRequestBody(r *http.Request) (IngestSnippetRequest, error) {
 	defer r.Body.Close()
 
-	var p CreateSnippetRequest
+	var p IngestSnippetRequest
 	d := json.NewDecoder(r.Body)
 	d.DisallowUnknownFields()
 
 	if err := d.Decode(&p); err != nil {
-		return CreateSnippetRequest{}, err
+		return IngestSnippetRequest{}, err
 	}
 	return p, nil
 }
 
-func toCreateSnippetParams(sr CreateSnippetRequest) service.CreateSnippetParam {
+func toCreateSnippetParams(sr IngestSnippetRequest) service.CreateSnippetParam {
 	ts := make([]service.CreateTagParam, len(sr.Tags))
 	for i, t := range sr.Tags {
 		ts[i] = service.CreateTagParam{

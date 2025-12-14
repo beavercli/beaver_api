@@ -65,7 +65,7 @@ type CreateTagRequest struct {
 type CreateLanguageRequest struct {
 	Name string `json:"name"`
 }
-type CreateSnippetRequest struct {
+type IngestSnippetRequest struct {
 	Title        string                     `json:"title"`
 	Code         string                     `json:"code"`
 	ProjectURL   string                     `json:"project_url,omitempty"`

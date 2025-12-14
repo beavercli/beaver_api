@@ -11,14 +11,57 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const bulkUpsertContributors = `-- name: BulkUpsertContributors :exec
-INSERT INTO contributors (first_name, last_name, email)
-SELECT
-    ($1::text[])[i] AS first_name,
-    ($2::text[])[i] AS last_name,
-    ($3::text[])[i] AS email
-FROM generate_subscripts($1::text[], 1) AS s(i)
-ON CONFLICT (email) DO NOTHING
+const bulkLinkSnippetContributors = `-- name: BulkLinkSnippetContributors :exec
+INSERT INTO snippet_contributors (snippet_id, contributor_id)
+SELECT $1::bigint, unnest($2::bigint[])
+ON CONFLICT (snippet_id, contributor_id) DO NOTHING
+`
+
+type BulkLinkSnippetContributorsParams struct {
+	SnippetID      int64
+	ContributorIds []int64
+}
+
+func (q *Queries) BulkLinkSnippetContributors(ctx context.Context, arg BulkLinkSnippetContributorsParams) error {
+	_, err := q.db.Exec(ctx, bulkLinkSnippetContributors, arg.SnippetID, arg.ContributorIds)
+	return err
+}
+
+const bulkLinkSnippetTags = `-- name: BulkLinkSnippetTags :exec
+INSERT INTO snippet_tags (snippet_id, tag_id)
+SELECT $1::bigint, unnest($2::bigint[])
+ON CONFLICT (snippet_id, tag_id) DO NOTHING
+`
+
+type BulkLinkSnippetTagsParams struct {
+	SnippetID int64
+	TagIds    []int64
+}
+
+func (q *Queries) BulkLinkSnippetTags(ctx context.Context, arg BulkLinkSnippetTagsParams) error {
+	_, err := q.db.Exec(ctx, bulkLinkSnippetTags, arg.SnippetID, arg.TagIds)
+	return err
+}
+
+const bulkUpsertContributors = `-- name: BulkUpsertContributors :many
+WITH input AS (
+    SELECT
+        ($1::text[])[i] AS first_name,
+        ($2::text[])[i] AS last_name,
+        ($3::text[])[i] AS email
+    FROM generate_subscripts($3::text[], 1) AS s(i)
+),
+ins AS (
+    INSERT INTO contributors (first_name, last_name, email)
+    SELECT first_name, last_name, email FROM input
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT c.id
+FROM contributors c
+JOIN input i ON c.email = i.email
 `
 
 type BulkUpsertContributorsParams struct {
@@ -27,20 +70,61 @@ type BulkUpsertContributorsParams struct {
 	Emails     []string
 }
 
-func (q *Queries) BulkUpsertContributors(ctx context.Context, arg BulkUpsertContributorsParams) error {
-	_, err := q.db.Exec(ctx, bulkUpsertContributors, arg.FirstNames, arg.LastNames, arg.Emails)
-	return err
+func (q *Queries) BulkUpsertContributors(ctx context.Context, arg BulkUpsertContributorsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, bulkUpsertContributors, arg.FirstNames, arg.LastNames, arg.Emails)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const bulkUpsertTags = `-- name: BulkUpsertTags :exec
-INSERT INTO tags (name)
-SELECT unnest($1::text[])
-ON CONFLICT (name) DO NOTHING
+const bulkUpsertTags = `-- name: BulkUpsertTags :many
+WITH input AS (
+    SELECT unnest($1::text[]) AS name
+),
+ins AS (
+    INSERT INTO tags (name)
+    SELECT name FROM input
+    ON CONFLICT (name) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT t.id
+FROM tags t
+JOIN input i ON t.name = i.name
 `
 
-func (q *Queries) BulkUpsertTags(ctx context.Context, names []string) error {
-	_, err := q.db.Exec(ctx, bulkUpsertTags, names)
-	return err
+func (q *Queries) BulkUpsertTags(ctx context.Context, names []string) ([]int64, error) {
+	rows, err := q.db.Query(ctx, bulkUpsertTags, names)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const countContributors = `-- name: CountContributors :one
@@ -118,6 +202,38 @@ DELETE FROM languages WHERE NOT (id = ANY($1::BIGINT[]))
 
 func (q *Queries) DeleteLanguagesExcept(ctx context.Context, ids []int64) error {
 	_, err := q.db.Exec(ctx, deleteLanguagesExcept, ids)
+	return err
+}
+
+const deleteSnippetContributorsExcept = `-- name: DeleteSnippetContributorsExcept :exec
+DELETE FROM snippet_contributors
+WHERE snippet_id = $1::bigint
+  AND NOT (contributor_id = ANY($2::bigint[]))
+`
+
+type DeleteSnippetContributorsExceptParams struct {
+	SnippetID      int64
+	ContributorIds []int64
+}
+
+func (q *Queries) DeleteSnippetContributorsExcept(ctx context.Context, arg DeleteSnippetContributorsExceptParams) error {
+	_, err := q.db.Exec(ctx, deleteSnippetContributorsExcept, arg.SnippetID, arg.ContributorIds)
+	return err
+}
+
+const deleteSnippetTagsExcept = `-- name: DeleteSnippetTagsExcept :exec
+DELETE FROM snippet_tags
+WHERE snippet_id = $1::bigint
+  AND NOT (tag_id = ANY($2::bigint[]))
+`
+
+type DeleteSnippetTagsExceptParams struct {
+	SnippetID int64
+	TagIds    []int64
+}
+
+func (q *Queries) DeleteSnippetTagsExcept(ctx context.Context, arg DeleteSnippetTagsExceptParams) error {
+	_, err := q.db.Exec(ctx, deleteSnippetTagsExcept, arg.SnippetID, arg.TagIds)
 	return err
 }
 
@@ -873,20 +989,30 @@ func (q *Queries) UpsertContributor(ctx context.Context, arg UpsertContributorPa
 	return err
 }
 
-const upsertLanguage = `-- name: UpsertLanguage :exec
-INSERT INTO languages (name) VALUES($1) ON CONFLICT (name) DO NOTHING
+const upsertLanguage = `-- name: UpsertLanguage :one
+WITH ins AS (
+    INSERT INTO languages (name)
+    VALUES ($1)
+    ON CONFLICT (name) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM languages WHERE name = $1
 `
 
-func (q *Queries) UpsertLanguage(ctx context.Context, name pgtype.Text) error {
-	_, err := q.db.Exec(ctx, upsertLanguage, name)
-	return err
+func (q *Queries) UpsertLanguage(ctx context.Context, name pgtype.Text) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertLanguage, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const upsertSnippet = `-- name: UpsertSnippet :one
 
 INSERT INTO snippets (title, code, project_url, git_repo_url, git_file_path, git_version, language_id, user_id, created_at)
 VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
-ON CONFLICT (title) DO UPDATE SET
+ON CONFLICT (git_repo_url, git_file_path) DO UPDATE SET
     code = EXCLUDED.code,
     project_url = EXCLUDED.project_url,
     git_repo_url = EXCLUDED.git_repo_url,

@@ -49,7 +49,9 @@ CREATE TABLE snippets(
     git_version VARCHAR(64), -- commit hash
 
     language_id BIGINT REFERENCES languages(id) ON DELETE SET NULL,
-    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+
+    CONSTRAINT snippets_repo_path_unique UNIQUE (git_repo_url, git_file_path)
 );
 
 CREATE TABLE snippet_tags(
@@ -66,7 +68,6 @@ CREATE TABLE snippet_contributors(
 
 -- Indexes for filtering by tags and contributors (junction tables)
 CREATE INDEX idx_snippets_language ON snippets (language_id);
-CREATE UNIQUE INDEX idx_snippets_repo_path ON snippets (git_repo_url, git_file_path) WHERE git_repo_url IS NOT NULL AND git_file_path IS NOT NULL;
 CREATE INDEX idx_snippet_tags_tag ON snippet_tags (tag_id, snippet_id);
 CREATE INDEX idx_snippet_contributors_contributor ON snippet_contributors (contributor_id, snippet_id);
 -- +goose StatementEnd

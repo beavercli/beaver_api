@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/beavercli/beaver_api/internal/storage"
 	"github.com/jackc/pgx/v5"
@@ -157,7 +158,7 @@ type CreateSnippetParam struct {
 	Contributors []CreateContributorParam
 }
 
-func (s *Service) InjestSnippet(ctx context.Context, csp CreateSnippetParam) (Snippet, error) {
+func (s *Service) InjestSnippet(ctx context.Context, csp CreateSnippetParam) error {
 	txOptions := pgx.TxOptions{
 		IsoLevel:       pgx.ReadCommitted,
 		AccessMode:     pgx.ReadWrite,
@@ -165,122 +166,114 @@ func (s *Service) InjestSnippet(ctx context.Context, csp CreateSnippetParam) (Sn
 	}
 
 	err := s.inTx(ctx, txOptions, func(db *storage.Queries) error {
-		if err := s.uploadSnippetRelatedObjects(ctx, &csp); err != nil {
-			return err
-		}
-		m, err := s.getMappingRelatedObjects(ctx, &csp)
+		r, err := uploadSnippetRelatedObjects(ctx, db, csp)
 		if err != nil {
 			return err
 		}
-		// TODO
-		fmt.Println(m)
-
-		// get mappings to create the snippet
-
+		if err := updateOrCreateSnippet(ctx, db, csp, r); err != nil {
+			return err
+		}
 		return nil
 	})
 
 	if err != nil {
-		return Snippet{}, err
-	}
-	return Snippet{}, nil
-}
-
-func (s *Service) uploadSnippetRelatedObjects(ctx context.Context, cs *CreateSnippetParam) error {
-	g, upsertCtx := errgroup.WithContext(ctx)
-
-	g.Go(func() error {
-		if err := s.db.UpsertLanguage(upsertCtx, pgtype.Text{String: cs.Language.Name, Valid: true}); err != nil {
-			return err
-		}
-		return nil
-	})
-	g.Go(func() error {
-		tag_names := make([]string, len(cs.Tags))
-		for i, t := range cs.Tags {
-			tag_names[i] = t.Name
-		}
-
-		if err := s.db.BulkUpsertTags(upsertCtx, tag_names); err != nil {
-			return err
-		}
-		return nil
-	})
-	g.Go(func() error {
-		contributorsParams := storage.BulkUpsertContributorsParams{
-			FirstNames: make([]string, len(cs.Contributors)),
-			LastNames:  make([]string, len(cs.Contributors)),
-			Emails:     make([]string, len(cs.Contributors)),
-		}
-		for i, c := range cs.Contributors {
-			contributorsParams.FirstNames[i] = c.FirstName
-			contributorsParams.LastNames[i] = c.LastName
-			contributorsParams.Emails[i] = c.Email
-		}
-		if err := s.db.BulkUpsertContributors(upsertCtx, contributorsParams); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err := g.Wait(); err != nil {
 		return err
 	}
 	return nil
 }
 
-type snippetMapping struct {
-	tagsIDsByName     map[string]int64
-	langIDsByName     map[string]int64
-	contribsIDsByName map[string]int64
+type snippetRefs struct {
+	langID      int64
+	tagsIDs     []int64
+	contribsIDs []int64
 }
 
-func (s *Service) getMappingRelatedObjects(ctx context.Context, cs *CreateSnippetParam) (snippetMapping, error) {
-	m := snippetMapping{
-		tagsIDsByName:     make(map[string]int64),
-		langIDsByName:     make(map[string]int64),
-		contribsIDsByName: make(map[string]int64),
+func uploadSnippetRelatedObjects(ctx context.Context, tx *storage.Queries, cs CreateSnippetParam) (snippetRefs, error) {
+	r := snippetRefs{
+		tagsIDs:     make([]int64, len(cs.Tags)),
+		contribsIDs: make([]int64, len(cs.Contributors)),
 	}
-	g, ctxMapping := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		tag_names := make([]string, len(cs.Tags))
-		for i, t := range cs.Tags {
-			tag_names[i] = t.Name
-		}
-		tags, err := s.db.GetTagIDsByNames(ctxMapping, tag_names)
-		if err != nil {
-			return err
-		}
-		for _, t := range tags {
-			m.tagsIDsByName[t.Name.String] = t.ID
-		}
-		return nil
-	})
-	g.Go(func() error {
-		emails := make([]string, len(cs.Contributors))
-		for i, c := range cs.Contributors {
-			emails[i] = c.Email
-		}
-		cs, err := s.db.GetContributorIDsByEmails(ctxMapping, emails)
-		if err != nil {
-			return err
-		}
-		for _, c := range cs {
-			m.contribsIDsByName[c.Email.String] = c.ID
-		}
-		return nil
-	})
-	g.Go(func() error {
-		id, err := s.db.GetLanguageIDByName(ctxMapping, pgtype.Text{String: cs.Language.Name, Valid: true})
-		if err != nil {
-			return err
-		}
-		m.langIDsByName[cs.Language.Name] = id
-		return nil
-	})
-	if err := g.Wait(); err != nil {
-		return snippetMapping{}, err
+
+	langID, err := tx.UpsertLanguage(ctx, pgtype.Text{String: cs.Language.Name, Valid: true})
+	if err != nil {
+		return snippetRefs{}, err
 	}
-	return m, nil
+	r.langID = langID
+
+	tagNames := make([]string, len(cs.Tags))
+	for i, t := range cs.Tags {
+		tagNames[i] = t.Name
+	}
+	r.tagsIDs, err = tx.BulkUpsertTags(ctx, tagNames)
+	if err != nil {
+		return snippetRefs{}, err
+	}
+
+	contributorsParams := storage.BulkUpsertContributorsParams{
+		FirstNames: make([]string, len(cs.Contributors)),
+		LastNames:  make([]string, len(cs.Contributors)),
+		Emails:     make([]string, len(cs.Contributors)),
+	}
+	for i, c := range cs.Contributors {
+		contributorsParams.FirstNames[i] = c.FirstName
+		contributorsParams.LastNames[i] = c.LastName
+		contributorsParams.Emails[i] = c.Email
+	}
+	r.contribsIDs, err = tx.BulkUpsertContributors(ctx, contributorsParams)
+	if err != nil {
+		return snippetRefs{}, err
+	}
+
+	return r, nil
+}
+
+func updateOrCreateSnippet(ctx context.Context, tx *storage.Queries, cs CreateSnippetParam, r snippetRefs) error {
+	snippetID, err := tx.UpsertSnippet(ctx, storage.UpsertSnippetParams{
+		Title:       pgtype.Text{String: cs.Title, Valid: true},
+		Code:        pgtype.Text{String: cs.Code, Valid: true},
+		ProjectUrl:  pgtype.Text{String: cs.ProjectURL, Valid: true},
+		GitRepoUrl:  pgtype.Text{String: cs.GitRepoURL, Valid: true},
+		GitFilePath: pgtype.Text{String: cs.GitPath, Valid: true},
+		GitVersion:  pgtype.Text{String: cs.GitVersion, Valid: true},
+		LanguageID:  pgtype.Int8{Int64: r.langID, Valid: true},
+		UserID:      pgtype.Int8{Valid: false},
+		CreatedAt:   pgtype.Timestamptz{Time: time.Now(), InfinityModifier: pgtype.Finite, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	dr := storage.DeleteSnippetTagsExceptParams{
+		SnippetID: snippetID,
+		TagIds:    r.tagsIDs,
+	}
+	if err := tx.DeleteSnippetTagsExcept(ctx, dr); err != nil {
+		return err
+	}
+	ur := storage.BulkLinkSnippetTagsParams{
+		SnippetID: snippetID,
+		TagIds:    r.tagsIDs,
+	}
+	if err := tx.BulkLinkSnippetTags(ctx, ur); err != nil {
+		return err
+	}
+
+	drContrib := storage.DeleteSnippetContributorsExceptParams{
+		SnippetID:      snippetID,
+		ContributorIds: r.contribsIDs,
+	}
+	if err := tx.DeleteSnippetContributorsExcept(ctx, drContrib); err != nil {
+		return err
+	}
+	urContrib := storage.BulkLinkSnippetContributorsParams{
+		SnippetID:      snippetID,
+		ContributorIds: r.contribsIDs,
+	}
+	if err := tx.BulkLinkSnippetContributors(ctx, urContrib); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func mapTags(rows []storage.GetTagsBySnippetIDsRow) map[int64][]Tag {
