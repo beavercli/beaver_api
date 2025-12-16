@@ -43,9 +43,12 @@ func (s *Service) GetSnippet(ctx context.Context, id int64) (Snippet, error) {
 		Title:      snippet.Title.String,
 		Code:       snippet.Code.String,
 		ProjectURL: snippet.ProjectUrl.String,
-		GitRepoURL: snippet.GitRepoUrl.String,
 		GitPath:    snippet.GitFilePath.String,
 		GitVersion: snippet.GitVersion.String,
+		Git: Git{
+			ID:  snippet.GitRepoID.Int64,
+			URL: snippet.GitRepoUrl.String,
+		},
 		Language: Language{
 			ID:   snippet.LanguageID.Int64,
 			Name: snippet.LanguageName.String,
@@ -118,9 +121,12 @@ func (s *Service) GetSnippetsPage(ctx context.Context, params ListSnippetsParams
 			ID:         s.ID,
 			Title:      s.Title.String,
 			ProjectURL: s.ProjectUrl.String,
-			GitRepoURL: s.GitRepoUrl.String,
 			GitPath:    s.GitFilePath.String,
 			GitVersion: s.GitVersion.String,
+			Git: Git{
+				ID:  s.GitRepoID.Int64,
+				URL: s.GitRepoUrl.String,
+			},
 			Language: Language{
 				ID:   s.LanguageID.Int64,
 				Name: s.LanguageName.String,
@@ -143,16 +149,22 @@ type CreateContributorParam struct {
 type CreateTagParam struct {
 	Name string
 }
+
 type CreateLanguageParam struct {
 	Name string
 }
+
+type CreateGitParam struct {
+	URL string
+}
+
 type CreateSnippetParam struct {
 	Title        string
 	Code         string
 	ProjectURL   string
-	GitRepoURL   string
 	GitPath      string
 	GitVersion   string
+	Git          CreateGitParam
 	Language     CreateLanguageParam
 	Tags         []CreateTagParam
 	Contributors []CreateContributorParam
@@ -184,21 +196,27 @@ func (s *Service) InjestSnippet(ctx context.Context, csp CreateSnippetParam) err
 
 type snippetRefs struct {
 	langID      int64
+	gitID       int64
 	tagsIDs     []int64
 	contribsIDs []int64
 }
 
 func uploadSnippetRelatedObjects(ctx context.Context, tx *storage.Queries, cs CreateSnippetParam) (snippetRefs, error) {
+	var err error
 	r := snippetRefs{
 		tagsIDs:     make([]int64, len(cs.Tags)),
 		contribsIDs: make([]int64, len(cs.Contributors)),
 	}
 
-	langID, err := tx.UpsertLanguage(ctx, pgtype.Text{String: cs.Language.Name, Valid: true})
+	r.langID, err = tx.UpsertLanguage(ctx, pgtype.Text{String: cs.Language.Name, Valid: true})
 	if err != nil {
 		return snippetRefs{}, err
 	}
-	r.langID = langID
+
+	r.gitID, err = tx.UpsertGitRepos(ctx, pgtype.Text{String: cs.Git.URL, Valid: true})
+	if err != nil {
+		return snippetRefs{}, err
+	}
 
 	tagNames := make([]string, len(cs.Tags))
 	for i, t := range cs.Tags {
@@ -232,9 +250,9 @@ func updateOrCreateSnippet(ctx context.Context, tx *storage.Queries, cs CreateSn
 		Title:       pgtype.Text{String: cs.Title, Valid: true},
 		Code:        pgtype.Text{String: cs.Code, Valid: true},
 		ProjectUrl:  pgtype.Text{String: cs.ProjectURL, Valid: true},
-		GitRepoUrl:  pgtype.Text{String: cs.GitRepoURL, Valid: true},
 		GitFilePath: pgtype.Text{String: cs.GitPath, Valid: true},
 		GitVersion:  pgtype.Text{String: cs.GitVersion, Valid: true},
+		GitRepoID:   pgtype.Int8{Int64: r.gitID, Valid: true},
 		LanguageID:  pgtype.Int8{Int64: r.langID, Valid: true},
 		UserID:      pgtype.Int8{Valid: false},
 		CreatedAt:   pgtype.Timestamptz{Time: time.Now(), InfinityModifier: pgtype.Finite, Valid: true},

@@ -369,15 +369,17 @@ SELECT
     s.title,
     s.code,
     s.project_url,
-    s.git_repo_url,
     s.git_file_path,
     s.git_version,
     s.created_at,
     s.updated_at,
+    g.id AS git_repo_id,
+    g.url AS git_repo_url,
     l.id AS language_id,
     l.name AS language_name
 FROM snippets s
 LEFT JOIN languages l ON s.language_id = l.id
+LEFT JOIN git_repos g ON s.git_repo_id = g.id
 WHERE s.id = $1
 `
 
@@ -386,11 +388,12 @@ type GetSnippetByIDRow struct {
 	Title        pgtype.Text
 	Code         pgtype.Text
 	ProjectUrl   pgtype.Text
-	GitRepoUrl   pgtype.Text
 	GitFilePath  pgtype.Text
 	GitVersion   pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
+	GitRepoID    pgtype.Int8
+	GitRepoUrl   pgtype.Text
 	LanguageID   pgtype.Int8
 	LanguageName pgtype.Text
 }
@@ -403,11 +406,12 @@ func (q *Queries) GetSnippetByID(ctx context.Context, id int64) (GetSnippetByIDR
 		&i.Title,
 		&i.Code,
 		&i.ProjectUrl,
-		&i.GitRepoUrl,
 		&i.GitFilePath,
 		&i.GitVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.GitRepoID,
+		&i.GitRepoUrl,
 		&i.LanguageID,
 		&i.LanguageName,
 	)
@@ -840,13 +844,15 @@ SELECT
     s.id,
     s.title,
     s.project_url,
-    s.git_repo_url,
     s.git_file_path,
     s.git_version,
+    g.id AS git_repo_id,
+    g.url AS git_repo_url,
     l.id AS language_id,
     l.name AS language_name
 FROM snippets s
 LEFT JOIN languages l ON s.language_id = l.id
+LEFT JOIN git_repos g ON s.git_repo_id = g.id
 WHERE ($1::BIGINT IS NULL OR s.language_id = $1::BIGINT)
   AND NOT EXISTS (
     SELECT 1
@@ -873,9 +879,10 @@ type ListSnippetsFilteredRow struct {
 	ID           int64
 	Title        pgtype.Text
 	ProjectUrl   pgtype.Text
-	GitRepoUrl   pgtype.Text
 	GitFilePath  pgtype.Text
 	GitVersion   pgtype.Text
+	GitRepoID    pgtype.Int8
+	GitRepoUrl   pgtype.Text
 	LanguageID   pgtype.Int8
 	LanguageName pgtype.Text
 }
@@ -898,9 +905,10 @@ func (q *Queries) ListSnippetsFiltered(ctx context.Context, arg ListSnippetsFilt
 			&i.ID,
 			&i.Title,
 			&i.ProjectUrl,
-			&i.GitRepoUrl,
 			&i.GitFilePath,
 			&i.GitVersion,
+			&i.GitRepoID,
+			&i.GitRepoUrl,
 			&i.LanguageID,
 			&i.LanguageName,
 		); err != nil {
@@ -989,6 +997,27 @@ func (q *Queries) UpsertContributor(ctx context.Context, arg UpsertContributorPa
 	return err
 }
 
+const upsertGitRepos = `-- name: UpsertGitRepos :one
+
+WITH ins AS (
+    INSERT INTO git_repos (url)
+    VALUES ($1)
+    ON CONFLICT (url) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM git_repos WHERE url = $1
+`
+
+// git_repos
+func (q *Queries) UpsertGitRepos(ctx context.Context, url pgtype.Text) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertGitRepos, url)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const upsertLanguage = `-- name: UpsertLanguage :one
 WITH ins AS (
     INSERT INTO languages (name)
@@ -1010,12 +1039,12 @@ func (q *Queries) UpsertLanguage(ctx context.Context, name pgtype.Text) (int64, 
 
 const upsertSnippet = `-- name: UpsertSnippet :one
 
-INSERT INTO snippets (title, code, project_url, git_repo_url, git_file_path, git_version, language_id, user_id, created_at)
+INSERT INTO snippets (title, code, project_url,  git_file_path, git_version, language_id, git_repo_id, user_id, created_at)
 VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
-ON CONFLICT (git_repo_url, git_file_path) DO UPDATE SET
+ON CONFLICT (git_repo_id, git_file_path) DO UPDATE SET
     code = EXCLUDED.code,
     project_url = EXCLUDED.project_url,
-    git_repo_url = EXCLUDED.git_repo_url,
+    git_repo_id = EXCLUDED.git_repo_id,
     git_file_path = EXCLUDED.git_file_path,
     git_version = EXCLUDED.git_version,
     language_id = EXCLUDED.language_id,
@@ -1028,10 +1057,10 @@ type UpsertSnippetParams struct {
 	Title       pgtype.Text
 	Code        pgtype.Text
 	ProjectUrl  pgtype.Text
-	GitRepoUrl  pgtype.Text
 	GitFilePath pgtype.Text
 	GitVersion  pgtype.Text
 	LanguageID  pgtype.Int8
+	GitRepoID   pgtype.Int8
 	UserID      pgtype.Int8
 	CreatedAt   pgtype.Timestamptz
 }
@@ -1042,10 +1071,10 @@ func (q *Queries) UpsertSnippet(ctx context.Context, arg UpsertSnippetParams) (i
 		arg.Title,
 		arg.Code,
 		arg.ProjectUrl,
-		arg.GitRepoUrl,
 		arg.GitFilePath,
 		arg.GitVersion,
 		arg.LanguageID,
+		arg.GitRepoID,
 		arg.UserID,
 		arg.CreatedAt,
 	)

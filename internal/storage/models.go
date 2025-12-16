@@ -17,6 +17,13 @@ type Contributor struct {
 	Email     pgtype.Text
 }
 
+type GitRepo struct {
+	ID        int64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	Url       pgtype.Text
+}
+
 type Language struct {
 	ID        int64
 	CreatedAt pgtype.Timestamptz
@@ -31,9 +38,9 @@ type Snippet struct {
 	Title       pgtype.Text
 	Code        pgtype.Text
 	ProjectUrl  pgtype.Text
-	GitRepoUrl  pgtype.Text
 	GitFilePath pgtype.Text
 	GitVersion  pgtype.Text
+	GitRepoID   pgtype.Int8
 	LanguageID  pgtype.Int8
 	UserID      pgtype.Int8
 }

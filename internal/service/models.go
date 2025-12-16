@@ -20,6 +20,11 @@ type LanguageList struct {
 	Total int
 }
 
+type Git struct {
+	ID  int64
+	URL string
+}
+
 type Contributor struct {
 	ID        int64
 	FirstName string
@@ -36,9 +41,9 @@ type Snippet struct {
 	Title        string
 	Code         string
 	ProjectURL   string
-	GitRepoURL   string
 	GitPath      string
 	GitVersion   string
+	Git          Git
 	Language     Language
 	Tags         []Tag
 	Contributors []Contributor
@@ -48,9 +53,9 @@ type SnippetSummary struct {
 	ID         int64
 	Title      string
 	ProjectURL string
-	GitRepoURL string
 	GitPath    string
 	GitVersion string
+	Git        Git
 	Language   Language
 	Tags       []Tag
 }

@@ -284,6 +284,11 @@ func seedSnippets(ctx context.Context, q *storage.Queries) {
 		gitPath := fmt.Sprintf("snippets/%s/file-%d-%d.%s", lang, i, rand.Intn(1000), fileExtForLang(lang))
 		gitVersion := randomSHA()
 
+		gitRepoID, err := q.UpsertGitRepos(ctx, pgtype.Text{String: gitRepoURL, Valid: true})
+		if err != nil {
+			panic(err)
+		}
+
 		var userID pgtype.Int8
 		if rand.Float32() < 0.7 && len(userIDs) > 0 {
 			userID = pgtype.Int8{Int64: userIDs[rand.Intn(len(userIDs))], Valid: true}
@@ -293,10 +298,10 @@ func seedSnippets(ctx context.Context, q *storage.Queries) {
 			Title:       pgtype.Text{String: title, Valid: true},
 			Code:        pgtype.Text{String: code, Valid: true},
 			ProjectUrl:  pgtype.Text{String: projectURL, Valid: true},
-			GitRepoUrl:  pgtype.Text{String: gitRepoURL, Valid: true},
 			GitFilePath: pgtype.Text{String: gitPath, Valid: true},
 			GitVersion:  pgtype.Text{String: gitVersion, Valid: true},
 			LanguageID:  pgtype.Int8{Int64: langID, Valid: true},
+			GitRepoID:   pgtype.Int8{Int64: gitRepoID, Valid: true},
 			UserID:      userID,
 			CreatedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		})

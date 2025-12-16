@@ -26,6 +26,14 @@ CREATE TABLE languages(
     name VARCHAR(255) UNIQUE
 );
 
+CREATE TABLE git_repos (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+
+    url VARCHAR(512) UNIQUE
+);
+
 CREATE TABLE contributors(
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -44,15 +52,17 @@ CREATE TABLE snippets(
     title VARCHAR(255) UNIQUE,
     code TEXT,
     project_url VARCHAR(1024), -- url link to docs or similar
-    git_repo_url VARCHAR(512), -- URL to the git repo root
     git_file_path VARCHAR(2048), -- file path relatevly to the git repo
     git_version VARCHAR(64), -- commit hash
 
+    git_repo_id BIGINT REFERENCES git_repos(id) ON DELETE SET NULL,
     language_id BIGINT REFERENCES languages(id) ON DELETE SET NULL,
     user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
 
-    CONSTRAINT snippets_repo_path_unique UNIQUE (git_repo_url, git_file_path)
+    CONSTRAINT snippets_repo_path_unique UNIQUE (git_repo_id, git_file_path)
 );
+
+
 
 CREATE TABLE snippet_tags(
     snippet_id BIGINT REFERENCES snippets(id) ON DELETE CASCADE,
@@ -78,6 +88,7 @@ DROP TABLE snippet_contributors;
 DROP TABLE snippet_tags;
 DROP TABLE snippets;
 DROP TABLE contributors;
+DROP TABLE git_repos;
 DROP TABLE languages;
 DROP TABLE tags;
 DROP TABLE users;

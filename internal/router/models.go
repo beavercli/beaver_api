@@ -17,15 +17,20 @@ type Contributor struct {
 	Email     string `json:"email"`
 }
 
+type Git struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
+}
+
 type Snippet struct {
 	ID           string        `json:"id"`
 	Title        string        `json:"title"`
 	Code         string        `json:"code"`
-	GitRepoURL   string        `json:"git_repo_url"`
+	Git          Git           `json:"git"`
 	GitPath      string        `json:"git_path"`
 	GitVersion   string        `json:"git_version"`
 	ProjectURL   string        `json:"project_url,omitempty"`
-	Language     Language      `json:"language,omitempty"`
+	Language     Language      `json:"language"`
 	Tags         []Tag         `json:"tags"`
 	Contributors []Contributor `json:"contributors"`
 }
@@ -40,10 +45,10 @@ type SnippetSummary struct {
 	ID         string   `json:"id"`
 	Title      string   `json:"title"`
 	ProjectURL string   `json:"project_url,omitempty"`
-	GitRepoURL string   `json:"git_repo_url"`
+	Git        Git      `json:"git"`
 	GitPath    string   `json:"git_path"`
 	GitVersion string   `json:"git_version"`
-	Language   Language `json:"language,omitempty"`
+	Language   Language `json:"language"`
 	Tags       []Tag    `json:"tags"`
 }
 
@@ -65,11 +70,16 @@ type CreateTagRequest struct {
 type CreateLanguageRequest struct {
 	Name string `json:"name"`
 }
+
+type CreateGit struct {
+	URL string `json:"name"`
+}
+
 type IngestSnippetRequest struct {
 	Title        string                     `json:"title"`
 	Code         string                     `json:"code"`
 	ProjectURL   string                     `json:"project_url,omitempty"`
-	GitRepoURL   string                     `json:"git_repo_url"`
+	Git          CreateGit                  `json:"git_repo_url"`
 	GitPath      string                     `json:"git_path"`
 	GitVersion   string                     `json:"git_version"`
 	Language     CreateLanguageRequest      `json:"language"`

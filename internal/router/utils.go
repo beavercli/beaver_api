@@ -27,7 +27,7 @@ func toSnippet(s service.Snippet) Snippet {
 		ID:           strconv.FormatInt(s.ID, 10),
 		Title:        s.Title,
 		Code:         s.Code,
-		GitRepoURL:   s.GitRepoURL,
+		Git:          toGit(s.Git),
 		GitPath:      s.GitPath,
 		GitVersion:   s.GitVersion,
 		ProjectURL:   s.ProjectURL,
@@ -61,6 +61,13 @@ func toLanguage(l service.Language) Language {
 	}
 }
 
+func toGit(l service.Git) Git {
+	return Git{
+		ID:  strconv.FormatInt(l.ID, 10),
+		URL: l.URL,
+	}
+}
+
 func toLanguages(ls []service.Language) []Language {
 	langs := make([]Language, len(ls))
 	for i, l := range ls {
@@ -89,9 +96,9 @@ func toSnippetSummary(s service.SnippetSummary) SnippetSummary {
 		ID:         strconv.FormatInt(s.ID, 10),
 		Title:      s.Title,
 		ProjectURL: s.ProjectURL,
-		GitRepoURL: s.GitRepoURL,
 		GitPath:    s.GitPath,
 		GitVersion: s.GitVersion,
+		Git:        toGit(s.Git),
 		Language:   toLanguage(s.Language),
 		Tags:       toTags(s.Tags),
 	}
@@ -171,7 +178,7 @@ func toCreateSnippetParams(sr IngestSnippetRequest) service.CreateSnippetParam {
 		Title:        sr.Title,
 		Code:         sr.Code,
 		ProjectURL:   sr.ProjectURL,
-		GitRepoURL:   sr.GitRepoURL,
+		Git:          service.CreateGitParam{URL: sr.Git.URL},
 		GitPath:      sr.GitPath,
 		GitVersion:   sr.GitVersion,
 		Language:     service.CreateLanguageParam{Name: sr.Language.Name},

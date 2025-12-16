@@ -34,6 +34,19 @@ SELECT t.id
 FROM tags t
 JOIN input i ON t.name = i.name;
 
+-- git_repos
+
+-- name: UpsertGitRepos :one
+WITH ins AS (
+    INSERT INTO git_repos (url)
+    VALUES ($1)
+    ON CONFLICT (url) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM git_repos WHERE url = $1;
+
 -- Languages
 
 -- name: ListLanguages :many
@@ -107,12 +120,12 @@ JOIN input i ON c.email = i.email;
 -- Snippets
 
 -- name: UpsertSnippet :one
-INSERT INTO snippets (title, code, project_url, git_repo_url, git_file_path, git_version, language_id, user_id, created_at)
+INSERT INTO snippets (title, code, project_url,  git_file_path, git_version, language_id, git_repo_id, user_id, created_at)
 VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
-ON CONFLICT (git_repo_url, git_file_path) DO UPDATE SET
+ON CONFLICT (git_repo_id, git_file_path) DO UPDATE SET
     code = EXCLUDED.code,
     project_url = EXCLUDED.project_url,
-    git_repo_url = EXCLUDED.git_repo_url,
+    git_repo_id = EXCLUDED.git_repo_id,
     git_file_path = EXCLUDED.git_file_path,
     git_version = EXCLUDED.git_version,
     language_id = EXCLUDED.language_id,
@@ -167,15 +180,17 @@ SELECT
     s.title,
     s.code,
     s.project_url,
-    s.git_repo_url,
     s.git_file_path,
     s.git_version,
     s.created_at,
     s.updated_at,
+    g.id AS git_repo_id,
+    g.url AS git_repo_url,
     l.id AS language_id,
     l.name AS language_name
 FROM snippets s
 LEFT JOIN languages l ON s.language_id = l.id
+LEFT JOIN git_repos g ON s.git_repo_id = g.id
 WHERE s.id = $1;
 
 -- name: GetTagsBySnippetID :many
@@ -198,13 +213,15 @@ SELECT
     s.id,
     s.title,
     s.project_url,
-    s.git_repo_url,
     s.git_file_path,
     s.git_version,
+    g.id AS git_repo_id,
+    g.url AS git_repo_url,
     l.id AS language_id,
     l.name AS language_name
 FROM snippets s
 LEFT JOIN languages l ON s.language_id = l.id
+LEFT JOIN git_repos g ON s.git_repo_id = g.id
 WHERE (sqlc.narg('language_id')::BIGINT IS NULL OR s.language_id = sqlc.narg('language_id')::BIGINT)
   AND NOT EXISTS (
     SELECT 1
