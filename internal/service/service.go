@@ -21,15 +21,22 @@ func (p *PageParam) Limit() int {
 	return p.PageSize
 }
 
-type Service struct {
-	pool *pgxpool.Pool
-	db   *storage.Queries
+type OAuthParam struct {
+	Secret   []byte
+	ClinetID string
 }
 
-func New(pool *pgxpool.Pool) *Service {
+type Service struct {
+	oauthConf OAuthParam
+	pool      *pgxpool.Pool
+	db        *storage.Queries
+}
+
+func New(pool *pgxpool.Pool, c OAuthParam) *Service {
 	return &Service{
-		pool: pool,
-		db:   storage.New(pool),
+		oauthConf: c,
+		pool:      pool,
+		db:        storage.New(pool),
 	}
 }
 

@@ -186,3 +186,13 @@ func toCreateSnippetParams(sr IngestSnippetRequest) service.CreateSnippetParam {
 		Contributors: cs,
 	}
 }
+
+func toDeviceOAuth(r service.OAuthRedirect) DeviceOAuth {
+	return DeviceOAuth{
+		URL:       r.URL,
+		UserCode:  r.UserCode,
+		ExpiersIn: r.ExpiresIn,
+		Interval:  r.Interval,
+		Token:     r.Token,
+	}
+}

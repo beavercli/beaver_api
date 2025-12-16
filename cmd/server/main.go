@@ -30,8 +30,11 @@ func main() {
 		panic(err)
 	}
 	defer pool.Close()
+	service := service.New(pool, service.OAuthParam{
+		ClinetID: cfg.OAuth.ClientID,
+		Secret:   cfg.OAuth.Secret,
+	})
 
-	service := service.New(pool)
 	server := router.New(cfg.Server, service)
 
 	go func() {

@@ -14,6 +14,7 @@ require (
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-openapi/jsonpointer v0.22.3 // indirect
 	github.com/go-openapi/jsonreference v0.21.3 // indirect
 	github.com/go-openapi/spec v0.22.1 // indirect

@@ -70,3 +70,15 @@ type User struct {
 	Username string
 	Email    string
 }
+
+type OAuthRedirect struct {
+	UserCode  string
+	URL       string
+	Token     string
+	ExpiresIn int
+	Interval  int
+}
+type OAuthGithubJWE struct {
+	DeviceCode string
+	ExpiresIn  int
+}

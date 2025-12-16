@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/base64"
+	"errors"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -14,7 +16,10 @@ type Database struct {
 	MaxConnIdleTime   time.Duration `env:"DATABASE_MAX_CONN_IDLE_TIME" envDefault:"30m"`
 	HealthCheckPeriod time.Duration `env:"DATABASE_HEALTH_CHECK_PERIOD" envDefault:"1m"`
 }
-
+type OAuth struct {
+	ClientID string    `env:"CLIENT_ID,required"`
+	Secret   SecretKey `env:"SECRET,required"`
+}
 
 type Server struct {
 	Addr         string        `env:"SERVER_ADDR"`
@@ -24,6 +29,7 @@ type Server struct {
 type Config struct {
 	DebugMode bool `env:"DEBUG"`
 
+	OAuth  OAuth
 	Server Server
 	DB     Database
 }
@@ -34,4 +40,20 @@ func New() *Config {
 		panic(err)
 	}
 	return &cfg
+}
+
+// SecretKey represents a 32-byte symmetric key decoded from base64.
+type SecretKey []byte
+
+// UnmarshalText lets env parse a base64-encoded string into a fixed-size key.
+func (k *SecretKey) UnmarshalText(text []byte) error {
+	decoded, err := base64.StdEncoding.DecodeString(string(text))
+	if err != nil {
+		return err
+	}
+	if len(decoded) != 32 {
+		return errors.New("secret must decode to 32 bytes")
+	}
+	*k = decoded
+	return nil
 }

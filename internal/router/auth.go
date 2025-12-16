@@ -2,13 +2,21 @@ package router
 
 import "net/http"
 
-// @Summary      GitHub login
-// @Description  Redirects to GitHub OAuth authorization page
+// @Summary      Start GitHub device login
+// @Description  Starts the GitHub device OAuth flow and returns verification URL, user code, and polling token
 // @Tags         auth
-// @Success      302  "Redirect to GitHub"
+// @Produce      json
+// @Success      200  {object}  DeviceOAuth
+// @Failure      400  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
 // @Router       /auth/github/login [get]
 func (s *server) handleGithubLogin(w http.ResponseWriter, r *http.Request) {
-
+	dr, err := s.service.GetDeviceRequest(r.Context())
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	jsonResponse(w, http.StatusOK, toDeviceOAuth(dr))
 }
 
 // @Summary      GitHub callback

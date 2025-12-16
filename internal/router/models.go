@@ -57,6 +57,14 @@ type SnippetListFilterArg struct {
 	TagIDs     []int64 // nil or all(>0)
 }
 
+type DeviceOAuth struct {
+	UserCode  string `json:"user_code"`
+	URL       string `json:"url"`
+	Token     string `json:"token"`
+	ExpiersIn int    `json:"expiers_in"`
+	Interval  int    `json:"interval"`
+}
+
 type CreateContributorRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
