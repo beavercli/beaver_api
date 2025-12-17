@@ -8,8 +8,6 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-const OAuthRedirectURL = "/auth/github/callback"
-
 type server struct {
 	service *service.Service
 }
@@ -32,10 +30,10 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 	mux.HandleFunc("GET /api/v1/languages", s.handleListLanguages)
 	mux.HandleFunc("GET /api/v1/contributors", s.handleListContributors)
 
-	mux.HandleFunc("GET /auth/github/login", s.handleGithubLogin)   // todo
-	mux.HandleFunc("GET "+OAuthRedirectURL, s.handleGithubCallback) // todo
-	mux.HandleFunc("POST /auth/logout", s.handleLogout)             // todo
-	mux.HandleFunc("GET /auth/me", s.handleMe)                      // todo
+	mux.HandleFunc("POST /auth/github/login", s.handleGithubLogin)              // todo
+	mux.HandleFunc("POST /auth/github/device/poll", s.handleGitHubDeviceStatus) // todo
+	mux.HandleFunc("POST /auth/logout", s.handleLogout)                         // todo
+	mux.HandleFunc("GET /auth/me", s.handleMe)                                  // todo
 
 	return &http.Server{
 		Addr:         cfg.Addr,

@@ -9,7 +9,7 @@ import "net/http"
 // @Success      200  {object}  DeviceOAuth
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
-// @Router       /auth/github/login [get]
+// @Router       /auth/github/login [post]
 func (s *server) handleGithubLogin(w http.ResponseWriter, r *http.Request) {
 	dr, err := s.service.GetDeviceRequest(r.Context())
 	if err != nil {
@@ -19,17 +19,28 @@ func (s *server) handleGithubLogin(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, toDeviceOAuth(dr))
 }
 
-// @Summary      GitHub callback
-// @Description  Handles GitHub OAuth callback and creates user session
+// @Summary      Complete GitHub device login
+// @Description  Exchanges the device flow token for a GitHub user and upserts the user in the database
 // @Tags         auth
-// @Param        code   query  string  true  "Authorization code from GitHub"
-// @Param        state  query  string  true  "State parameter for CSRF protection"
-// @Success      302  "Redirect to frontend"
-// @Failure      400  {object}  ErrorResponse
-// @Failure      500  {object}  ErrorResponse
-// @Router       /auth/github/callback [get]
-func (s *server) handleGithubCallback(w http.ResponseWriter, r *http.Request) {
-
+// @Accept       json
+// @Produce      json
+// @Param        request  body      GithubPullRequest  true  "Device flow token returned from /auth/github/login"
+// @Success      200      {object}  DeviceAuthResult
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Router       /auth/github/device/poll [post]
+func (s *server) handleGitHubDeviceStatus(w http.ResponseWriter, r *http.Request) {
+	p, err := toGithubPullRequest(r)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	ar, err := s.service.UpsertUser(r.Context(), p.Token)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	jsonResponse(w, http.StatusOK, toDeviceAuthResult(ar))
 }
 
 // @Summary      Logout

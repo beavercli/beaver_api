@@ -13,6 +13,7 @@ import (
 	"github.com/beavercli/beaver_api/common/config"
 	"github.com/beavercli/beaver_api/common/database"
 	_ "github.com/beavercli/beaver_api/docs"
+	"github.com/beavercli/beaver_api/internal/integrations/github"
 	"github.com/beavercli/beaver_api/internal/router"
 	"github.com/beavercli/beaver_api/internal/service"
 )
@@ -30,11 +31,9 @@ func main() {
 		panic(err)
 	}
 	defer pool.Close()
-	service := service.New(pool, service.OAuthParam{
-		ClinetID: cfg.OAuth.ClientID,
-		Secret:   cfg.OAuth.Secret,
-	})
 
+	ghCLient := github.New(cfg.OAuth.ClientID, 2*time.Second)
+	service := service.New(pool, service.Config{Secret: cfg.OAuth.Secret}, ghCLient)
 	server := router.New(cfg.Server, service)
 
 	go func() {

@@ -196,3 +196,37 @@ func toDeviceOAuth(r service.OAuthRedirect) DeviceOAuth {
 		Token:     r.Token,
 	}
 }
+
+func toGithubPullRequest(r *http.Request) (GithubPullRequest, error) {
+	defer r.Body.Close()
+
+	var p GithubPullRequest
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&p); err != nil {
+		return GithubPullRequest{}, err
+	}
+	return p, nil
+}
+
+func toDeviceAuthResult(ar service.DeviceAuthResult) DeviceAuthResult {
+	var session *Session
+	if ar.Session != nil {
+		session = &Session{
+			User: User{
+				ID:       strconv.FormatInt(ar.Session.User.ID, 10),
+				Email:    ar.Session.User.Email,
+				Username: ar.Session.User.Username,
+			},
+			TokenPair: TokenPair{
+				AccessToken:  ar.Session.TokenPair.AccessToken,
+				RefreshToken: ar.Session.TokenPair.RefreshToken,
+			},
+		}
+	}
+	return DeviceAuthResult{
+		Status:  DeviceAuthStatus(ar.Status),
+		Session: session,
+	}
+}

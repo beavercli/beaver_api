@@ -80,5 +80,28 @@ type OAuthRedirect struct {
 }
 type OAuthGithubJWE struct {
 	DeviceCode string
-	ExpiresIn  int
+	ExpiresIn  int64
+}
+
+type TokenPair struct {
+	AccessToken  string `json:"acess_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+type Session struct {
+	User      User
+	TokenPair TokenPair
+}
+
+type DeviceAuthStatus string
+
+const (
+	DeviceAuthPending DeviceAuthStatus = "pending"
+	DeviceAuthDone    DeviceAuthStatus = "done"
+	DeviceAuthExpired DeviceAuthStatus = "expired"
+)
+
+type DeviceAuthResult struct {
+	Status  DeviceAuthStatus
+	Session *Session
 }

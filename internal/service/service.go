@@ -3,40 +3,36 @@ package service
 import (
 	"context"
 
+	"github.com/beavercli/beaver_api/internal/integrations/github"
 	"github.com/beavercli/beaver_api/internal/storage"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PageParam struct {
-	Page     int
-	PageSize int
+type Config struct {
+	Secret []byte
 }
 
-func (p *PageParam) Offset() int {
-	return (p.Page - 1) * p.PageSize
-}
-
-func (p *PageParam) Limit() int {
-	return p.PageSize
-}
-
-type OAuthParam struct {
-	Secret   []byte
-	ClinetID string
+type GithubOAuthClient interface {
+	GetDeviceCode(ctx context.Context) (github.GithubDevicePayload, error)
+	GetAccessToken(ctx context.Context, dc string) (github.GithubAccesTokenPayload, error)
+	GetUser(ctx context.Context, t github.GithubAccesTokenPayload) (github.GithubUserPayload, error)
+	GetUserEmail(ctx context.Context, t github.GithubAccesTokenPayload) (github.GithubUserEmailPayload, error)
 }
 
 type Service struct {
-	oauthConf OAuthParam
-	pool      *pgxpool.Pool
-	db        *storage.Queries
+	conf   Config
+	github GithubOAuthClient
+	pool   *pgxpool.Pool
+	db     *storage.Queries
 }
 
-func New(pool *pgxpool.Pool, c OAuthParam) *Service {
+func New(pool *pgxpool.Pool, c Config, github GithubOAuthClient) *Service {
 	return &Service{
-		oauthConf: c,
-		pool:      pool,
-		db:        storage.New(pool),
+		conf:   c,
+		github: github,
+		pool:   pool,
+		db:     storage.New(pool),
 	}
 }
 

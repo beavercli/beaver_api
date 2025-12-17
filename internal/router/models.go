@@ -95,6 +95,32 @@ type IngestSnippetRequest struct {
 	Contributors []CreateContributorRequest `json:"contributors"`
 }
 
+type GithubPullRequest struct {
+	Token string `json:"token"`
+}
+type TokenPair struct {
+	AccessToken  string `json:"acess_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+type Session struct {
+	User      User
+	TokenPair TokenPair
+}
+
+type DeviceAuthStatus string
+
+const (
+	DeviceAuthPending DeviceAuthStatus = "pending"
+	DeviceAuthDone    DeviceAuthStatus = "done"
+	DeviceAuthExpired DeviceAuthStatus = "expired"
+)
+
+type DeviceAuthResult struct {
+	Status  DeviceAuthStatus `json:"status"`
+	Session *Session
+}
+
 // Type aliases for Swagger documentation
 type SnippetsPageResponse = PageResponse[SnippetSummary]
 type TagsPageResponse = PageResponse[Tag]
