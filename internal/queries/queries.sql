@@ -258,10 +258,16 @@ WHERE st.snippet_id = ANY(sqlc.arg('snippet_ids')::BIGINT[]);
 
 -- Users
 
--- name: UpsertUser :exec
-INSERT INTO users (username, email, password_hash)
-VALUES ($1, $2, $3)
-ON CONFLICT (email) DO NOTHING;
+-- name: UpsertUser :one
+WITH ins AS (
+    INSERT INTO users (username, email, password_hash)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM users WHERE email = $2;
 
 -- name: GetUserIDByEmail :one
 SELECT id FROM users WHERE email = $1;

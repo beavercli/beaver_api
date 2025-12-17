@@ -1092,11 +1092,17 @@ func (q *Queries) UpsertTag(ctx context.Context, name pgtype.Text) error {
 	return err
 }
 
-const upsertUser = `-- name: UpsertUser :exec
+const upsertUser = `-- name: UpsertUser :one
 
-INSERT INTO users (username, email, password_hash)
-VALUES ($1, $2, $3)
-ON CONFLICT (email) DO NOTHING
+WITH ins AS (
+    INSERT INTO users (username, email, password_hash)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM users WHERE email = $2
 `
 
 type UpsertUserParams struct {
@@ -1106,7 +1112,9 @@ type UpsertUserParams struct {
 }
 
 // Users
-func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) error {
-	_, err := q.db.Exec(ctx, upsertUser, arg.Username, arg.Email, arg.PasswordHash)
-	return err
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertUser, arg.Username, arg.Email, arg.PasswordHash)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

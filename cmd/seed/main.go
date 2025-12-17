@@ -217,7 +217,7 @@ func seedUsers(ctx context.Context, q *storage.Queries) {
 		email := fmt.Sprintf("user%d@example.com", i)
 		passwordHash := fmt.Sprintf("hash_%d", i)
 
-		if err := q.UpsertUser(ctx, storage.UpsertUserParams{
+		if _, err := q.UpsertUser(ctx, storage.UpsertUserParams{
 			Username:     username,
 			Email:        email,
 			PasswordHash: passwordHash,
