@@ -187,6 +187,41 @@ func (q *Queries) CountTags(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const createRefreshToken = `-- name: CreateRefreshToken :one
+
+INSERT INTO refresh_tokens (token_hash, issued_at, expires_at, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, created_at, updated_at, token_hash, issued_at, expires_at, user_id
+`
+
+type CreateRefreshTokenParams struct {
+	TokenHash string
+	IssuedAt  pgtype.Timestamptz
+	ExpiresAt pgtype.Timestamptz
+	UserID    pgtype.Int8
+}
+
+// Refresh tokens
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, createRefreshToken,
+		arg.TokenHash,
+		arg.IssuedAt,
+		arg.ExpiresAt,
+		arg.UserID,
+	)
+	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TokenHash,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.UserID,
+	)
+	return i, err
+}
+
 const deleteContributorsExcept = `-- name: DeleteContributorsExcept :exec
 DELETE FROM contributors WHERE NOT (id = ANY($1::BIGINT[]))
 `
@@ -202,6 +237,15 @@ DELETE FROM languages WHERE NOT (id = ANY($1::BIGINT[]))
 
 func (q *Queries) DeleteLanguagesExcept(ctx context.Context, ids []int64) error {
 	_, err := q.db.Exec(ctx, deleteLanguagesExcept, ids)
+	return err
+}
+
+const deleteRefreshTokenByID = `-- name: DeleteRefreshTokenByID :exec
+DELETE FROM refresh_tokens WHERE id = $1
+`
+
+func (q *Queries) DeleteRefreshTokenByID(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteRefreshTokenByID, id)
 	return err
 }
 
@@ -361,6 +405,25 @@ func (q *Queries) GetLanguageIDByName(ctx context.Context, name pgtype.Text) (in
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
+SELECT id, created_at, updated_at, token_hash, issued_at, expires_at, user_id FROM refresh_tokens WHERE token_hash = $1
+`
+
+func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenByHash, tokenHash)
+	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TokenHash,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.UserID,
+	)
+	return i, err
 }
 
 const getSnippetByID = `-- name: GetSnippetByID :one

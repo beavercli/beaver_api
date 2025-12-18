@@ -283,3 +283,16 @@ SELECT * FROM contributors;
 
 -- name: ListAllUsers :many
 SELECT * FROM users;
+
+-- Refresh tokens
+
+-- name: CreateRefreshToken :one
+INSERT INTO refresh_tokens (token_hash, issued_at, expires_at, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: DeleteRefreshTokenByID :exec
+DELETE FROM refresh_tokens WHERE id = $1;
+
+-- name: GetRefreshTokenByHash :one
+SELECT * FROM refresh_tokens WHERE token_hash = $1;

@@ -31,6 +31,16 @@ type Language struct {
 	Name      pgtype.Text
 }
 
+type RefreshToken struct {
+	ID        int64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	TokenHash string
+	IssuedAt  pgtype.Timestamptz
+	ExpiresAt pgtype.Timestamptz
+	UserID    pgtype.Int8
+}
+
 type Snippet struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
