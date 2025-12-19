@@ -126,8 +126,31 @@ type DeviceAuthResult struct {
 	Session *Session
 }
 
+type CreateServiceAccessTokenRequest struct {
+	// Human readable label to identify the token.
+	Name string `json:"name"`
+	// Optional ISO8601 expiry timestamp; omit for long-lived tokens.
+	ExpiresAt string `json:"expires_at,omitempty"`
+}
+
+type ServiceAccessToken struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Token     string `json:"token,omitempty"` // Secret token value; returned only at creation time
+	ExpiresAt string `json:"expires_at,omitempty"`
+	CreatedAt string `json:"created_at"`
+}
+
+type ServiceAccessTokenSummary struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ExpiresAt string `json:"expires_at,omitempty"`
+	CreatedAt string `json:"created_at"`
+}
+
 // Type aliases for Swagger documentation
 type SnippetsPageResponse = PageResponse[SnippetSummary]
 type TagsPageResponse = PageResponse[Tag]
 type LanguagesPageResponse = PageResponse[Language]
 type ContributorsPageResponse = PageResponse[Contributor]
+type ServiceAccessTokensPageResponse = PageResponse[ServiceAccessTokenSummary]
