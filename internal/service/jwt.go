@@ -19,22 +19,25 @@ const (
 	RefreshToken    TokenType     = "refresh"
 )
 
-type AccessTokenClaims struct {
+type JWTClaims struct {
 	jwt.Claims
 	Type TokenType `json:"token_type"`
 }
 
 func (s *Service) IssueJWT(tt TokenType, userID int64, ttl time.Duration) (string, error) {
+	signerOpts := jose.SignerOptions{}
+	signerOpts.WithType("JWT")
+
 	signer, err := jose.NewSigner(
 		jose.SigningKey{Algorithm: jose.HS256, Key: s.conf.Secret},
-		(&jose.SignerOptions{}).WithType("JWT"),
+		&signerOpts,
 	)
 	if err != nil {
 		return "", err
 	}
 
 	now := time.Now()
-	claims := AccessTokenClaims{
+	claims := JWTClaims{
 		Claims: jwt.Claims{
 			ID:        uuid.New().String(),
 			Subject:   strconv.FormatInt(userID, 10),
@@ -47,6 +50,18 @@ func (s *Service) IssueJWT(tt TokenType, userID int64, ttl time.Duration) (strin
 	}
 
 	return jwt.Signed(signer).Claims(claims).Serialize()
+}
+
+func (s *Service) ParseJWT(t string) (JWTClaims, error) {
+	token, err := jwt.ParseSigned(t, []jose.SignatureAlgorithm{jose.HS256})
+	if err != nil {
+		return JWTClaims{}, err
+	}
+	claims := JWTClaims{}
+	if err := token.Claims(s.conf.Secret, &claims); err != nil {
+		return JWTClaims{}, err
+	}
+	return claims, nil
 }
 
 func (s *Service) generateJWE(g github.GithubDevicePayload) (string, error) {

@@ -210,19 +210,38 @@ func toGithubPullRequest(r *http.Request) (GithubPullRequest, error) {
 	return p, nil
 }
 
+func toRefreshToken(r *http.Request) (RefreshToken, error) {
+	defer r.Body.Close()
+	var p RefreshToken
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&p); err != nil {
+		return RefreshToken{}, err
+	}
+	return p, nil
+}
+
+func toTokenPair(tp service.TokenPair) TokenPair {
+	return TokenPair{
+		AccessToken:  tp.AccessToken,
+		RefreshToken: tp.RefreshToken,
+	}
+}
+func toUser(u service.User) User {
+	return User{
+		ID:       strconv.FormatInt(u.ID, 10),
+		Email:    u.Email,
+		Username: u.Username,
+	}
+}
+
 func toDeviceAuthResult(ar service.DeviceAuthResult) DeviceAuthResult {
 	var session *Session
 	if ar.Session != nil {
 		session = &Session{
-			User: User{
-				ID:       strconv.FormatInt(ar.Session.User.ID, 10),
-				Email:    ar.Session.User.Email,
-				Username: ar.Session.User.Username,
-			},
-			TokenPair: TokenPair{
-				AccessToken:  ar.Session.TokenPair.AccessToken,
-				RefreshToken: ar.Session.TokenPair.RefreshToken,
-			},
+			User:      toUser(ar.Session.User),
+			TokenPair: toTokenPair(ar.Session.TokenPair),
 		}
 	}
 	return DeviceAuthResult{

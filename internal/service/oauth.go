@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/beavercli/beaver_api/internal/integrations/github"
 	"github.com/beavercli/beaver_api/internal/storage"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,7 +32,7 @@ func (s *Service) GetDeviceRequest(ctx context.Context) (OAuthRedirect, error) {
 	}, nil
 }
 
-func (s *Service) UpsertUser(ctx context.Context, jwe string) (DeviceAuthResult, error) {
+func (s *Service) GithubDevicePoll(ctx context.Context, jwe string) (DeviceAuthResult, error) {
 	dc, err := s.decryptJWE(jwe)
 	if err != nil {
 		return DeviceAuthResult{}, err
@@ -112,6 +114,71 @@ func (s *Service) UpsertUser(ctx context.Context, jwe string) (DeviceAuthResult,
 				RefreshToken: refreshToken,
 			},
 		}}, nil
+}
+
+func (s *Service) RotateTokens(ctx context.Context, userID int64, refreshToken string) (TokenPair, error) {
+	c, err := s.ParseJWT(refreshToken)
+	if err != nil {
+		return TokenPair{}, err
+	}
+	// check ExpiredAt in the JWT token
+	tn := time.Now().Unix()
+	if c.Expiry.Time().Unix() < tn {
+		return TokenPair{}, fmt.Errorf("Refresh token expired")
+	}
+
+	// check the token exist in the issued refresh tokens
+	t, err := s.db.GetRefreshTokenByHash(ctx, hashRefreshToken(refreshToken))
+	if err != nil {
+		return TokenPair{}, err
+	}
+	// there is an edge case when we need to update the TTL for the
+	// refresh tokens. For that case we also need to check ExpiredAt
+	// with the value stored in the DB
+	if t.ExpiresAt.Time.Unix() < tn {
+		return TokenPair{}, fmt.Errorf("Refresh token expired")
+	}
+
+	// all is good we can issue a new token pair
+
+	at, err := s.IssueJWT(AccessToken, userID, AccessTokenTTL)
+	if err != nil {
+		return TokenPair{}, err
+	}
+
+	rt, err := s.IssueJWT(RefreshToken, userID, RefreshTokenTTL)
+	if err != nil {
+		return TokenPair{}, err
+	}
+
+	txOpts := pgx.TxOptions{
+		IsoLevel:   pgx.ReadCommitted,
+		AccessMode: pgx.ReadWrite,
+	}
+	err = s.inTx(ctx, txOpts, func(db *storage.Queries) error {
+		if err := s.db.DeleteRefreshTokenByID(ctx, t.ID); err != nil {
+			return err
+		}
+
+		if _, err := s.db.CreateRefreshToken(ctx, storage.CreateRefreshTokenParams{
+			UserID:    pgtype.Int8{Int64: userID, Valid: true},
+			TokenHash: hashRefreshToken(rt),
+			IssuedAt:  pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(RefreshTokenTTL), Valid: true},
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return TokenPair{}, err
+	}
+
+	return TokenPair{
+		AccessToken:  at,
+		RefreshToken: rt,
+	}, nil
 }
 
 func hashRefreshToken(t string) string {

@@ -1,6 +1,9 @@
 package router
 
-import "net/http"
+import (
+	"net/http"
+	"strconv"
+)
 
 // @Summary      Start GitHub device login
 // @Description  Starts the GitHub device OAuth flow and returns verification URL, user code, and polling token
@@ -35,12 +38,44 @@ func (s *server) handleGitHubDeviceStatus(w http.ResponseWriter, r *http.Request
 		jsonError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	ar, err := s.service.UpsertUser(r.Context(), p.Token)
+	ar, err := s.service.GithubDevicePoll(r.Context(), p.Token)
 	if err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	jsonResponse(w, http.StatusOK, toDeviceAuthResult(ar))
+}
+
+// @Summary      Refresh session tokens
+// @Description  Rotates a refresh token and returns a new access/refresh pair
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RefreshToken  true  "Refresh token payload"
+// @Success      200      {object}  TokenPair
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Router       /auth/refresh [post]
+func (s *server) handleTokenRotate(w http.ResponseWriter, r *http.Request) {
+	t, err := toRefreshToken(r)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	uID, err := strconv.ParseInt(t.UserID, 10, 64)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+
+	}
+	tp, err := s.service.RotateTokens(r.Context(), uID, t.RefreshToken)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, toTokenPair(tp))
 }
 
 // @Summary      Logout

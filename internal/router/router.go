@@ -30,8 +30,13 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 	mux.HandleFunc("GET /api/v1/languages", s.handleListLanguages)
 	mux.HandleFunc("GET /api/v1/contributors", s.handleListContributors)
 
+	mux.HandleFunc("POST /api/v1/ingest-tokens", s.handleCreateIngestToken)   // todo
+	mux.HandleFunc("GET /api/v1/ingest-tokens", s.handleGetIngestToken)       // todo
+	mux.HandleFunc("DELETE /api/v1/ingest-tokens", s.handleDeleteIngestToken) // todo
+
 	mux.HandleFunc("POST /auth/github/login", s.handleGithubLogin)              // todo
 	mux.HandleFunc("POST /auth/github/device/poll", s.handleGitHubDeviceStatus) // todo
+	mux.HandleFunc("POST /auth/refresh", s.handleTokenRotate)                   // todo
 	mux.HandleFunc("POST /auth/logout", s.handleLogout)                         // todo
 	mux.HandleFunc("GET /auth/me", s.handleMe)                                  // todo
 

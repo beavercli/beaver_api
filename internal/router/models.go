@@ -1,5 +1,10 @@
 package router
 
+type RefreshToken struct {
+	UserID       string `json:"user_id"` // TODO: REMOVE (only for test)
+	RefreshToken string `json:"refresh_token"`
+}
+
 type Tag struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
