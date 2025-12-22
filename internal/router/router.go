@@ -22,23 +22,23 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
 
-	mux.HandleFunc("GET /api/v1/snippets/{SnippetID}", s.handleGetSnippet)
-	mux.HandleFunc("GET /api/v1/snippets", s.handleListSnippets)
-	mux.HandleFunc("POST /api/v1/snippets", s.handleIngestSnippet)
+	mux.HandleFunc("GET /api/v1/snippets/{SnippetID}", s.authMiddleware(s.handleGetSnippet))
+	mux.HandleFunc("GET /api/v1/snippets", s.authMiddleware(s.handleListSnippets))
+	mux.HandleFunc("POST /api/v1/snippets", s.authMiddleware(s.handleIngestSnippet))
 
-	mux.HandleFunc("GET /api/v1/tags", s.handleListTags)
-	mux.HandleFunc("GET /api/v1/languages", s.handleListLanguages)
-	mux.HandleFunc("GET /api/v1/contributors", s.handleListContributors)
+	mux.HandleFunc("GET /api/v1/tags", s.authMiddleware(s.handleListTags))
+	mux.HandleFunc("GET /api/v1/languages", s.authMiddleware(s.handleListLanguages))
+	mux.HandleFunc("GET /api/v1/contributors", s.authMiddleware(s.handleListContributors))
 
-	mux.HandleFunc("POST /api/v1/service-access-tokens", s.handleCreateServiceAccessToken)   // todo
-	mux.HandleFunc("GET /api/v1/service-access-tokens", s.handleGetServiceAccessToken)       // todo
-	mux.HandleFunc("DELETE /api/v1/service-access-tokens", s.handleDeleteServiceAccessToken) // todo
+	mux.HandleFunc("POST /api/v1/service-access-tokens", s.authMiddleware(s.handleCreateServiceAccessToken))   // todo
+	mux.HandleFunc("GET /api/v1/service-access-tokens", s.authMiddleware(s.handleGetServiceAccessToken))       // todo
+	mux.HandleFunc("DELETE /api/v1/service-access-tokens", s.authMiddleware(s.handleDeleteServiceAccessToken)) // todo
 
 	mux.HandleFunc("POST /auth/github/login", s.handleGithubLogin)              // todo
 	mux.HandleFunc("POST /auth/github/device/poll", s.handleGitHubDeviceStatus) // todo
-	mux.HandleFunc("POST /auth/refresh", s.handleTokenRotate)                   // todo
-	mux.HandleFunc("POST /auth/logout", s.handleLogout)                         // todo
-	mux.HandleFunc("GET /auth/me", s.handleMe)                                  // todo
+	mux.HandleFunc("POST /auth/refresh", s.authMiddleware(s.handleTokenRotate)) // todo
+	mux.HandleFunc("POST /auth/logout", s.authMiddleware(s.handleLogout))       // todo
+	mux.HandleFunc("GET /auth/me", s.authMiddleware(s.handleMe))                // todo
 
 	return &http.Server{
 		Addr:         cfg.Addr,
