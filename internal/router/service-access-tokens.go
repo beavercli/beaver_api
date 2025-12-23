@@ -8,6 +8,7 @@ import "net/http"
 // @Accept       json
 // @Produce      json
 // @Param        request  body      CreateServiceAccessTokenRequest  true  "Token label and optional expiry"
+// @Security     BearerAuth
 // @Success      201      {object}  ServiceAccessToken
 // @Failure      400      {object}  ErrorResponse
 // @Failure      401      {object}  ErrorResponse
@@ -23,6 +24,7 @@ func (s *server) handleCreateServiceAccessToken(w http.ResponseWriter, r *http.R
 // @Produce      json
 // @Param        page       query  int  false  "Page number"     default(1)
 // @Param        page_size  query  int  false  "Items per page"  default(20)
+// @Security     BearerAuth
 // @Success      200  {object}  ServiceAccessTokensPageResponse
 // @Failure      401  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
@@ -35,6 +37,7 @@ func (s *server) handleGetServiceAccessToken(w http.ResponseWriter, r *http.Requ
 // @Description  Revokes an existing service access token by ID.
 // @Tags         service-access-tokens
 // @Param        token_id  query  int  true  "Service access token ID"
+// @Security     BearerAuth
 // @Success      204
 // @Failure      400  {object}  ErrorResponse
 // @Failure      401  {object}  ErrorResponse

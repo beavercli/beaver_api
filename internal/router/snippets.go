@@ -12,6 +12,7 @@ import (
 // @Tags         snippets
 // @Produce      json
 // @Param        id  path  int  true  "Snippet ID"
+// @Security     BearerAuth
 // @Success      200  {object}  Snippet
 // @Failure      400  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
@@ -41,6 +42,7 @@ func (s *server) handleGetSnippet(w http.ResponseWriter, r *http.Request) {
 // @Param        page_size  query  int     false  "Items per page"   default(20)
 // @Param        language_id  query  int    false  "Filter by language ID"
 // @Param        tag_id       query  []int  false  "Filter by tag IDs (repeat: tag_id=1&tag_id=2)"  collectionFormat(multi)
+// @Security     BearerAuth
 // @Success      200  {object}  SnippetsPageResponse
 // @Failure      500  {object}  ErrorResponse
 // @Router       /api/v1/snippets [get]
@@ -81,6 +83,7 @@ func (s *server) handleListSnippets(w http.ResponseWriter, r *http.Request) {
 // @Accept       json
 // @Produce      json
 // @Param        body  body  IngestSnippetRequest  true  "Snippet data"
+// @Security     BearerAuth
 // @Success      201
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse

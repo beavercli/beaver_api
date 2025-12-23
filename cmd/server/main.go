@@ -21,6 +21,9 @@ import (
 // @title           Beaver API
 // @version         1.0
 // @description     Code snippets API
+// @securitydefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 // @host      localhost:8080
 func main() {
 	ctx := context.Background()

@@ -12,6 +12,7 @@ import (
 // @Produce      json
 // @Param        page       query  int  false  "Page number"     default(1)
 // @Param        page_size  query  int  false  "Items per page"  default(20)
+// @Security     BearerAuth
 // @Success      200  {object}  ContributorsPageResponse
 // @Failure      500  {object}  ErrorResponse
 // @Router       /api/v1/contributors [get]

@@ -52,6 +52,7 @@ func (s *server) handleGitHubDeviceStatus(w http.ResponseWriter, r *http.Request
 // @Accept       json
 // @Produce      json
 // @Param        request  body      RefreshToken  true  "Refresh token payload"
+// @Security     BearerAuth
 // @Success      200      {object}  TokenPair
 // @Failure      400      {object}  ErrorResponse
 // @Failure      500      {object}  ErrorResponse
@@ -81,6 +82,7 @@ func (s *server) handleTokenRotate(w http.ResponseWriter, r *http.Request) {
 // @Summary      Logout
 // @Description  Clears user session and logs out
 // @Tags         auth
+// @Security     BearerAuth
 // @Success      200  {object}  MessageResponse
 // @Failure      500  {object}  ErrorResponse
 // @Router       /auth/logout [post]
@@ -92,6 +94,7 @@ func (s *server) handleLogout(w http.ResponseWriter, r *http.Request) {
 // @Description  Returns the currently authenticated user
 // @Tags         auth
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object}  User
 // @Failure      401  {object}  ErrorResponse
 // @Router       /auth/me [get]
