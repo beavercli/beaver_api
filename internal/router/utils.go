@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -248,4 +249,14 @@ func toDeviceAuthResult(ar service.DeviceAuthResult) DeviceAuthResult {
 		Status:  DeviceAuthStatus(ar.Status),
 		Session: session,
 	}
+}
+
+func getUserFromCtx(ctx context.Context) (service.User, error) {
+	v := ctx.Value(UserContextKey)
+	user, ok := v.(service.User)
+	if ok == false {
+		return service.User{}, fmt.Errorf("There is no user in the request context")
+	}
+
+	return user, nil
 }

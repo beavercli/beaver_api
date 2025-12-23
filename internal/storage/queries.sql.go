@@ -597,6 +597,24 @@ func (q *Queries) GetTagsBySnippetIDs(ctx context.Context, snippetIds []int64) (
 	return items, nil
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, created_at, updated_at, username, email, password_hash FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
+	)
+	return i, err
+}
+
 const getUserIDByEmail = `-- name: GetUserIDByEmail :one
 SELECT id FROM users WHERE email = $1
 `

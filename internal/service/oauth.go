@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/beavercli/beaver_api/internal/integrations/github"
@@ -178,6 +179,33 @@ func (s *Service) RotateTokens(ctx context.Context, userID int64, refreshToken s
 	return TokenPair{
 		AccessToken:  at,
 		RefreshToken: rt,
+	}, nil
+}
+
+func (s *Service) AuthUser(ctx context.Context, tokenType TokenType, token string) (User, error) {
+	if tokenType != AccessToken {
+		return User{}, fmt.Errorf("Expected %s token type, given %s", AccessToken, tokenType)
+	}
+
+	c, err := s.ParseJWT(token)
+	if err != nil {
+		return User{}, err
+	}
+
+	userID, err := strconv.ParseInt(c.Subject, 10, 64)
+	if err != nil {
+		return User{}, err
+	}
+
+	user, err := s.db.GetUserByID(ctx, userID)
+	if err != nil {
+		return User{}, err
+	}
+
+	return User{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
 	}, nil
 }
 
