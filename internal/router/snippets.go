@@ -103,7 +103,7 @@ func (s *server) handleIngestSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.service.InjestSnippet(r.Context(), toCreateSnippetParams(p, userID)); err != nil {
+	if err := s.service.IngestSnippet(r.Context(), toCreateSnippetParams(p, userID)); err != nil {
 		jsonError(w, http.StatusBadRequest, err.Error())
 		return
 	}

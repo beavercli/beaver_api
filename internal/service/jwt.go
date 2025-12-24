@@ -17,6 +17,7 @@ const (
 	RefreshTokenTTL time.Duration = AccessTokenTTL * 4
 	AccessToken     TokenType     = "access"
 	RefreshToken    TokenType     = "refresh"
+	SessionToken    TokenType     = "session"
 )
 
 type JWTClaims struct {

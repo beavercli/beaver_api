@@ -171,7 +171,7 @@ type CreateSnippetParam struct {
 	Contributors []CreateContributorParam
 }
 
-func (s *Service) InjestSnippet(ctx context.Context, csp CreateSnippetParam) error {
+func (s *Service) IngestSnippet(ctx context.Context, csp CreateSnippetParam) error {
 	txOptions := pgx.TxOptions{
 		IsoLevel:       pgx.ReadCommitted,
 		AccessMode:     pgx.ReadWrite,

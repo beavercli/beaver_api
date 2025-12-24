@@ -21,12 +21,21 @@ func (s *server) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		token := strings.Split(ht, " ")
 
-		if token[0] != "Bearer" {
+		var tokenType service.TokenType
+
+		switch token[0] {
+		case "Bearer":
+			tokenType = service.AccessToken
+			break
+		case "Session":
+			tokenType = service.SessionToken
+			break
+		default:
 			jsonError(w, http.StatusUnauthorized, fmt.Sprintf("Token type %s is not supported", token[0]))
 			return
 		}
 
-		userID, err := s.service.AuthUser(r.Context(), service.AccessToken, token[1])
+		userID, err := s.service.AuthUser(r.Context(), tokenType, token[1])
 		if err != nil {
 			jsonError(w, http.StatusUnauthorized, err.Error())
 			return
