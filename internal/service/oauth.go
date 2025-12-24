@@ -183,10 +183,17 @@ func (s *Service) RotateTokens(ctx context.Context, userID int64, refreshToken s
 }
 
 func (s *Service) AuthUser(ctx context.Context, tokenType TokenType, token string) (int64, error) {
-	if tokenType != AccessToken {
-		return 0, fmt.Errorf("Expected %s token type, given %s", AccessToken, tokenType)
+	switch tokenType {
+	case AccessToken:
+		return s.handleAccessToken(ctx, token)
+	case SessionToken:
+		return s.handleSessionToken(ctx, token)
+	default:
+		return 0, fmt.Errorf("Provided token is not supported yet: %s", tokenType)
 	}
+}
 
+func (s *Service) handleAccessToken(_ context.Context, token string) (int64, error) {
 	c, err := s.ParseJWT(token)
 	if err != nil {
 		return 0, err
@@ -198,6 +205,21 @@ func (s *Service) AuthUser(ctx context.Context, tokenType TokenType, token strin
 	}
 
 	return userID, nil
+}
+func (s *Service) handleSessionToken(_ context.Context, token string) (int64, error) {
+	c, err := s.ParseJWT(token)
+	if err != nil {
+		return 0, err
+	}
+
+	userID, err := strconv.ParseInt(c.Subject, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	// TODO: check the token in DB
+
+	return userID, nil
+
 }
 
 func hashRefreshToken(t string) string {
