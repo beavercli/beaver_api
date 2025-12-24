@@ -1,5 +1,7 @@
 package service
 
+import "time"
+
 type Tag struct {
 	ID   int64
 	Name string
@@ -104,4 +106,10 @@ const (
 type DeviceAuthResult struct {
 	Status  DeviceAuthStatus
 	Session *Session
+}
+
+type ServiceAccessToken struct {
+	Name      string
+	Token     string
+	ExpiresAt time.Duration
 }
