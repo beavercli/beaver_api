@@ -26,13 +26,13 @@ func (s *server) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		user, err := s.service.AuthUser(r.Context(), service.AccessToken, token[1])
+		userID, err := s.service.AuthUser(r.Context(), service.AccessToken, token[1])
 		if err != nil {
 			jsonError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserContextKey, user)
+		ctx := context.WithValue(r.Context(), UserContextKey, userID)
 		r = r.WithContext(ctx)
 
 		next(w, r)

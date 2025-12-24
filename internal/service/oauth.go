@@ -182,31 +182,22 @@ func (s *Service) RotateTokens(ctx context.Context, userID int64, refreshToken s
 	}, nil
 }
 
-func (s *Service) AuthUser(ctx context.Context, tokenType TokenType, token string) (User, error) {
+func (s *Service) AuthUser(ctx context.Context, tokenType TokenType, token string) (int64, error) {
 	if tokenType != AccessToken {
-		return User{}, fmt.Errorf("Expected %s token type, given %s", AccessToken, tokenType)
+		return 0, fmt.Errorf("Expected %s token type, given %s", AccessToken, tokenType)
 	}
 
 	c, err := s.ParseJWT(token)
 	if err != nil {
-		return User{}, err
+		return 0, err
 	}
 
 	userID, err := strconv.ParseInt(c.Subject, 10, 64)
 	if err != nil {
-		return User{}, err
+		return 0, err
 	}
 
-	user, err := s.db.GetUserByID(ctx, userID)
-	if err != nil {
-		return User{}, err
-	}
-
-	return User{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-	}, nil
+	return userID, nil
 }
 
 func hashRefreshToken(t string) string {

@@ -164,6 +164,7 @@ type CreateSnippetParam struct {
 	ProjectURL   string
 	GitPath      string
 	GitVersion   string
+	UserID       int64
 	Git          CreateGitParam
 	Language     CreateLanguageParam
 	Tags         []CreateTagParam
@@ -254,7 +255,7 @@ func updateOrCreateSnippet(ctx context.Context, tx *storage.Queries, cs CreateSn
 		GitVersion:  pgtype.Text{String: cs.GitVersion, Valid: true},
 		GitRepoID:   pgtype.Int8{Int64: r.gitID, Valid: true},
 		LanguageID:  pgtype.Int8{Int64: r.langID, Valid: true},
-		UserID:      pgtype.Int8{Valid: false},
+		UserID:      pgtype.Int8{Int64: cs.UserID, Valid: true},
 		CreatedAt:   pgtype.Timestamptz{Time: time.Now(), InfinityModifier: pgtype.Finite, Valid: true},
 	})
 	if err != nil {

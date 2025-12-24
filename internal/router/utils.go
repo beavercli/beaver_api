@@ -158,7 +158,7 @@ func toCreateSnippetRequestBody(r *http.Request) (IngestSnippetRequest, error) {
 	return p, nil
 }
 
-func toCreateSnippetParams(sr IngestSnippetRequest) service.CreateSnippetParam {
+func toCreateSnippetParams(sr IngestSnippetRequest, userID int64) service.CreateSnippetParam {
 	ts := make([]service.CreateTagParam, len(sr.Tags))
 	for i, t := range sr.Tags {
 		ts[i] = service.CreateTagParam{
@@ -182,6 +182,7 @@ func toCreateSnippetParams(sr IngestSnippetRequest) service.CreateSnippetParam {
 		Git:          service.CreateGitParam{URL: sr.Git.URL},
 		GitPath:      sr.GitPath,
 		GitVersion:   sr.GitVersion,
+		UserID:       userID,
 		Language:     service.CreateLanguageParam{Name: sr.Language.Name},
 		Tags:         ts,
 		Contributors: cs,
@@ -251,12 +252,13 @@ func toDeviceAuthResult(ar service.DeviceAuthResult) DeviceAuthResult {
 	}
 }
 
-func getUserFromCtx(ctx context.Context) (service.User, error) {
+func getUserIDFromCtx(ctx context.Context) (int64, error) {
 	v := ctx.Value(UserContextKey)
-	user, ok := v.(service.User)
+
+	userID, ok := v.(int64)
 	if ok == false {
-		return service.User{}, fmt.Errorf("There is no user in the request context")
+		return 0, fmt.Errorf("There is no user in the request context")
 	}
 
-	return user, nil
+	return userID, nil
 }

@@ -48,12 +48,12 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 	}
 }
 
-// @Summary      Health check
-// @Description  Returns health status of the API
-// @Tags         health
-// @Produce      plain
-// @Success      200  {string}  string  "healthy"
-// @Router       /health [get]
+// @Summary		Health check
+// @Description	Returns health status of the API
+// @Tags			health
+// @Produce		plain
+// @Success		200	{string}	string	"healthy"
+// @Router			/health [get]
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, MessageResponse{Message: "healthy"})
 }
