@@ -94,7 +94,7 @@ func (s *Service) GithubDevicePoll(ctx context.Context, jwe string) (DeviceAuthR
 
 	_, err = s.db.CreateRefreshToken(ctx, storage.CreateRefreshTokenParams{
 		UserID:    pgtype.Int8{Int64: userID, Valid: true},
-		TokenHash: hashRefreshToken(refreshToken),
+		TokenHash: computeHash(refreshToken),
 		IssuedAt:  pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(RefreshTokenTTL), Valid: true},
 	})
@@ -129,7 +129,7 @@ func (s *Service) RotateTokens(ctx context.Context, userID int64, refreshToken s
 	}
 
 	// check the token exist in the issued refresh tokens
-	t, err := s.db.GetRefreshTokenByHash(ctx, hashRefreshToken(refreshToken))
+	t, err := s.db.GetRefreshTokenByHash(ctx, computeHash(refreshToken))
 	if err != nil {
 		return TokenPair{}, err
 	}
@@ -163,7 +163,7 @@ func (s *Service) RotateTokens(ctx context.Context, userID int64, refreshToken s
 
 		if _, err := s.db.CreateRefreshToken(ctx, storage.CreateRefreshTokenParams{
 			UserID:    pgtype.Int8{Int64: userID, Valid: true},
-			TokenHash: hashRefreshToken(rt),
+			TokenHash: computeHash(rt),
 			IssuedAt:  pgtype.Timestamptz{Time: time.Now(), Valid: true},
 			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(RefreshTokenTTL), Valid: true},
 		}); err != nil {
@@ -199,6 +199,10 @@ func (s *Service) handleAccessToken(_ context.Context, token string) (int64, err
 		return 0, err
 	}
 
+	if time.Now().Unix() > c.Expiry.Time().Unix() {
+		return 0, fmt.Errorf("Token is expired")
+	}
+
 	userID, err := strconv.ParseInt(c.Subject, 10, 64)
 	if err != nil {
 		return 0, err
@@ -206,23 +210,35 @@ func (s *Service) handleAccessToken(_ context.Context, token string) (int64, err
 
 	return userID, nil
 }
-func (s *Service) handleSessionToken(_ context.Context, token string) (int64, error) {
+func (s *Service) handleSessionToken(ctx context.Context, token string) (int64, error) {
 	c, err := s.ParseJWT(token)
 	if err != nil {
 		return 0, err
 	}
 
+	if time.Now().Unix() > c.Expiry.Time().Unix() {
+		return 0, fmt.Errorf("Session token is expired")
+	}
+
 	userID, err := strconv.ParseInt(c.Subject, 10, 64)
 	if err != nil {
 		return 0, err
 	}
-	// TODO: check the token in DB
+
+	t, err := s.db.GetRefreshTokenByHash(ctx, computeHash(token))
+	if err != nil {
+		return 0, err
+	}
+
+	if time.Now().Unix() > t.ExpiresAt.Time.Unix() {
+		return 0, fmt.Errorf("Session token is expired based on the udpated expiry")
+	}
 
 	return userID, nil
 
 }
 
-func hashRefreshToken(t string) string {
+func computeHash(t string) string {
 	sum := sha256.Sum256([]byte(t))
 	return base64.StdEncoding.EncodeToString(sum[:])
 }
