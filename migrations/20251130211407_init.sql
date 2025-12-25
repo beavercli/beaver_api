@@ -22,6 +22,18 @@ CREATE TABLE refresh_tokens(
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE service_access_tokens(
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+
+    token_hash VARCHAR(512) UNIQUE NOT NULL,
+    issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE tags(
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -104,5 +116,6 @@ DROP TABLE git_repos;
 DROP TABLE languages;
 DROP TABLE tags;
 DROP TABLE refresh_tokens;
+DROP TABLE service_access_tokens;
 DROP TABLE users;
 -- +goose StatementEnd

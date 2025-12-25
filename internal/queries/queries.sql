@@ -299,3 +299,22 @@ DELETE FROM refresh_tokens WHERE id = $1;
 
 -- name: GetRefreshTokenByHash :one
 SELECT * FROM refresh_tokens WHERE token_hash = $1;
+
+-- Service access tokens
+
+-- name: CreateServiceAccessToken :one
+INSERT INTO service_access_tokens (token_hash, issued_at, expires_at, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: DeleteServiceAccessTokenByID :exec
+DELETE FROM service_access_tokens WHERE id = $1;
+
+-- name: ListServiceAccessTokensByUserID :many
+SELECT *
+FROM service_access_tokens
+WHERE user_id = $1
+ORDER BY created_at DESC;
+
+-- name: GetServiceAccessTokenByHash :one
+SELECT * FROM service_access_tokens WHERE token_hash = $1;

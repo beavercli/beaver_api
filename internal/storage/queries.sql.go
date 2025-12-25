@@ -222,6 +222,41 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	return i, err
 }
 
+const createServiceAccessToken = `-- name: CreateServiceAccessToken :one
+
+INSERT INTO service_access_tokens (token_hash, issued_at, expires_at, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, created_at, updated_at, token_hash, issued_at, expires_at, user_id
+`
+
+type CreateServiceAccessTokenParams struct {
+	TokenHash string
+	IssuedAt  pgtype.Timestamptz
+	ExpiresAt pgtype.Timestamptz
+	UserID    pgtype.Int8
+}
+
+// Service access tokens
+func (q *Queries) CreateServiceAccessToken(ctx context.Context, arg CreateServiceAccessTokenParams) (ServiceAccessToken, error) {
+	row := q.db.QueryRow(ctx, createServiceAccessToken,
+		arg.TokenHash,
+		arg.IssuedAt,
+		arg.ExpiresAt,
+		arg.UserID,
+	)
+	var i ServiceAccessToken
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TokenHash,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.UserID,
+	)
+	return i, err
+}
+
 const deleteContributorsExcept = `-- name: DeleteContributorsExcept :exec
 DELETE FROM contributors WHERE NOT (id = ANY($1::BIGINT[]))
 `
@@ -246,6 +281,15 @@ DELETE FROM refresh_tokens WHERE id = $1
 
 func (q *Queries) DeleteRefreshTokenByID(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, deleteRefreshTokenByID, id)
+	return err
+}
+
+const deleteServiceAccessTokenByID = `-- name: DeleteServiceAccessTokenByID :exec
+DELETE FROM service_access_tokens WHERE id = $1
+`
+
+func (q *Queries) DeleteServiceAccessTokenByID(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteServiceAccessTokenByID, id)
 	return err
 }
 
@@ -414,6 +458,25 @@ SELECT id, created_at, updated_at, token_hash, issued_at, expires_at, user_id FR
 func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error) {
 	row := q.db.QueryRow(ctx, getRefreshTokenByHash, tokenHash)
 	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TokenHash,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const getServiceAccessTokenByHash = `-- name: GetServiceAccessTokenByHash :one
+SELECT id, created_at, updated_at, token_hash, issued_at, expires_at, user_id FROM service_access_tokens WHERE token_hash = $1
+`
+
+func (q *Queries) GetServiceAccessTokenByHash(ctx context.Context, tokenHash string) (ServiceAccessToken, error) {
+	row := q.db.QueryRow(ctx, getServiceAccessTokenByHash, tokenHash)
+	var i ServiceAccessToken
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -889,6 +952,41 @@ func (q *Queries) ListLinkedTagIDs(ctx context.Context) ([]int64, error) {
 			return nil, err
 		}
 		items = append(items, tag_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServiceAccessTokensByUserID = `-- name: ListServiceAccessTokensByUserID :many
+SELECT id, created_at, updated_at, token_hash, issued_at, expires_at, user_id
+FROM service_access_tokens
+WHERE user_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListServiceAccessTokensByUserID(ctx context.Context, userID pgtype.Int8) ([]ServiceAccessToken, error) {
+	rows, err := q.db.Query(ctx, listServiceAccessTokensByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ServiceAccessToken
+	for rows.Next() {
+		var i ServiceAccessToken
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TokenHash,
+			&i.IssuedAt,
+			&i.ExpiresAt,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
