@@ -1,6 +1,10 @@
 package router
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/beavercli/beaver_api/internal/service"
+)
 
 // @Summary		Issue service access token
 // @Description	Creates a long-lived token for third-party integrations. The token secret is returned only at creation time.
@@ -15,7 +19,30 @@ import "net/http"
 // @Failure		500	{object}	ErrorResponse
 // @Router			/api/v1/service-access-tokens [post]
 func (s *server) handleCreateServiceAccessToken(w http.ResponseWriter, r *http.Request) {
-	return
+	p, err := getCreateServiceAccessTokenRequest(r)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID, err := getUserIDFromCtx(r.Context())
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+
+	}
+	serviceTokenArgs, err := toServiceCreateServiceAccessToken(p, userID)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	t, err := s.service.CreateServceAccessToken(r.Context(), serviceTokenArgs)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusCreated, toServiceAccessToken(t))
 }
 
 // @Summary		List service access tokens
@@ -29,8 +56,29 @@ func (s *server) handleCreateServiceAccessToken(w http.ResponseWriter, r *http.R
 // @Failure		401	{object}	ErrorResponse
 // @Failure		500	{object}	ErrorResponse
 // @Router			/api/v1/service-access-tokens [get]
-func (s *server) handleGetServiceAccessToken(w http.ResponseWriter, r *http.Request) {
-	return
+func (s *server) handleGetServiceAccessTokens(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	pq, err := toPageQuery(v)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	userID, err := getUserIDFromCtx(r.Context())
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	sl, err := s.service.ListServiceAccessTokens(r.Context(), userID, service.PageParam{
+		Page:     pq.Page,
+		PageSize: pq.PageSize,
+	})
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, toPage(sl.Items, sl.Total, pq.Page, pq.PageSize))
 }
 
 // @Summary		Revoke service access token

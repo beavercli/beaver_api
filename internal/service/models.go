@@ -109,7 +109,21 @@ type DeviceAuthResult struct {
 }
 
 type ServiceAccessToken struct {
+	ID        int64
 	Name      string
 	Token     string
-	ExpiresAt time.Duration
+	ExpiresAt time.Time
+	IssuedAT  time.Time
+}
+
+type ServiceAccessTokenSum struct {
+	ID        int64
+	Name      string
+	ExpiresAt time.Time
+	IssuedAT  time.Time
+}
+
+type ServiceAccessTokenList struct {
+	Items []ServiceAccessTokenSum
+	Total int
 }

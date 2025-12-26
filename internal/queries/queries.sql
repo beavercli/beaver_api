@@ -303,8 +303,8 @@ SELECT * FROM refresh_tokens WHERE token_hash = $1;
 -- Service access tokens
 
 -- name: CreateServiceAccessToken :one
-INSERT INTO service_access_tokens (token_hash, issued_at, expires_at, user_id)
-VALUES ($1, $2, $3, $4)
+INSERT INTO service_access_tokens (token_hash, name, issued_at, expires_at, user_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: DeleteServiceAccessTokenByID :exec
@@ -315,6 +315,11 @@ SELECT *
 FROM service_access_tokens
 WHERE user_id = $1
 ORDER BY created_at DESC;
+
+-- name: CountServiceAccessTokensByUserID :one
+SELECT COUNT(*)
+FROM service_access_tokens
+WHERE user_id = $1;
 
 -- name: GetServiceAccessTokenByHash :one
 SELECT * FROM service_access_tokens WHERE token_hash = $1;

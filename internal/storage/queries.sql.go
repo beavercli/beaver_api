@@ -149,6 +149,19 @@ func (q *Queries) CountLanguages(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countServiceAccessTokensByUserID = `-- name: CountServiceAccessTokensByUserID :one
+SELECT COUNT(*)
+FROM service_access_tokens
+WHERE user_id = $1
+`
+
+func (q *Queries) CountServiceAccessTokensByUserID(ctx context.Context, userID pgtype.Int8) (int64, error) {
+	row := q.db.QueryRow(ctx, countServiceAccessTokensByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSnippetsFiltered = `-- name: CountSnippetsFiltered :one
 SELECT COUNT(*) FROM snippets s
 WHERE ($1::BIGINT IS NULL OR s.language_id = $1::BIGINT)
@@ -224,13 +237,14 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 
 const createServiceAccessToken = `-- name: CreateServiceAccessToken :one
 
-INSERT INTO service_access_tokens (token_hash, issued_at, expires_at, user_id)
-VALUES ($1, $2, $3, $4)
-RETURNING id, created_at, updated_at, token_hash, issued_at, expires_at, user_id
+INSERT INTO service_access_tokens (token_hash, name, issued_at, expires_at, user_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, created_at, updated_at, token_hash, issued_at, expires_at, user_id
 `
 
 type CreateServiceAccessTokenParams struct {
 	TokenHash string
+	Name      string
 	IssuedAt  pgtype.Timestamptz
 	ExpiresAt pgtype.Timestamptz
 	UserID    pgtype.Int8
@@ -240,6 +254,7 @@ type CreateServiceAccessTokenParams struct {
 func (q *Queries) CreateServiceAccessToken(ctx context.Context, arg CreateServiceAccessTokenParams) (ServiceAccessToken, error) {
 	row := q.db.QueryRow(ctx, createServiceAccessToken,
 		arg.TokenHash,
+		arg.Name,
 		arg.IssuedAt,
 		arg.ExpiresAt,
 		arg.UserID,
@@ -247,6 +262,7 @@ func (q *Queries) CreateServiceAccessToken(ctx context.Context, arg CreateServic
 	var i ServiceAccessToken
 	err := row.Scan(
 		&i.ID,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TokenHash,
@@ -471,7 +487,7 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 }
 
 const getServiceAccessTokenByHash = `-- name: GetServiceAccessTokenByHash :one
-SELECT id, created_at, updated_at, token_hash, issued_at, expires_at, user_id FROM service_access_tokens WHERE token_hash = $1
+SELECT id, name, created_at, updated_at, token_hash, issued_at, expires_at, user_id FROM service_access_tokens WHERE token_hash = $1
 `
 
 func (q *Queries) GetServiceAccessTokenByHash(ctx context.Context, tokenHash string) (ServiceAccessToken, error) {
@@ -479,6 +495,7 @@ func (q *Queries) GetServiceAccessTokenByHash(ctx context.Context, tokenHash str
 	var i ServiceAccessToken
 	err := row.Scan(
 		&i.ID,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TokenHash,
@@ -960,7 +977,7 @@ func (q *Queries) ListLinkedTagIDs(ctx context.Context) ([]int64, error) {
 }
 
 const listServiceAccessTokensByUserID = `-- name: ListServiceAccessTokensByUserID :many
-SELECT id, created_at, updated_at, token_hash, issued_at, expires_at, user_id
+SELECT id, name, created_at, updated_at, token_hash, issued_at, expires_at, user_id
 FROM service_access_tokens
 WHERE user_id = $1
 ORDER BY created_at DESC
@@ -977,6 +994,7 @@ func (q *Queries) ListServiceAccessTokensByUserID(ctx context.Context, userID pg
 		var i ServiceAccessToken
 		if err := rows.Scan(
 			&i.ID,
+			&i.Name,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TokenHash,

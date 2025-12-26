@@ -1,5 +1,7 @@
 package router
 
+import "time"
+
 type RefreshToken struct {
 	UserID       string `json:"user_id"` // TODO: REMOVE (only for test)
 	RefreshToken string `json:"refresh_token"`
@@ -127,10 +129,8 @@ type DeviceAuthResult struct {
 }
 
 type CreateServiceAccessTokenRequest struct {
-	// Human readable label to identify the token.
-	Name string `json:"name"`
-	// Optional ISO8601 expiry timestamp; omit for long-lived tokens.
-	ExpiresAt string `json:"expires_at,omitempty"`
+	Name      string    `json:"name"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type ServiceAccessToken struct {

@@ -199,7 +199,7 @@ func (s *Service) handleAccessToken(_ context.Context, token string) (int64, err
 		return 0, err
 	}
 
-	if time.Now().Unix() > c.Expiry.Time().Unix() {
+	if time.Now().After(c.Expiry.Time()) {
 		return 0, fmt.Errorf("Token is expired")
 	}
 
@@ -216,7 +216,7 @@ func (s *Service) handleSessionToken(ctx context.Context, token string) (int64, 
 		return 0, err
 	}
 
-	if time.Now().Unix() > c.Expiry.Time().Unix() {
+	if time.Now().After(c.Expiry.Time()) {
 		return 0, fmt.Errorf("Session token is expired")
 	}
 
@@ -230,7 +230,7 @@ func (s *Service) handleSessionToken(ctx context.Context, token string) (int64, 
 		return 0, err
 	}
 
-	if time.Now().Unix() > t.ExpiresAt.Time.Unix() {
+	if time.Now().After(t.ExpiresAt.Time) {
 		return 0, fmt.Errorf("Session token is expired based on the udpated expiry")
 	}
 

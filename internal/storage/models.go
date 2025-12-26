@@ -43,6 +43,7 @@ type RefreshToken struct {
 
 type ServiceAccessToken struct {
 	ID        int64
+	Name      string
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	TokenHash string

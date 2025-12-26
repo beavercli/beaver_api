@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/beavercli/beaver_api/internal/service"
 )
@@ -261,4 +262,38 @@ func getUserIDFromCtx(ctx context.Context) (int64, error) {
 	}
 
 	return userID, nil
+}
+
+func getCreateServiceAccessTokenRequest(r *http.Request) (CreateServiceAccessTokenRequest, error) {
+	defer r.Body.Close()
+
+	var p CreateServiceAccessTokenRequest
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	if err := d.Decode(&p); err != nil {
+		return CreateServiceAccessTokenRequest{}, err
+	}
+
+	return p, nil
+}
+
+func toServiceCreateServiceAccessToken(csat CreateServiceAccessTokenRequest, userID int64) (service.CreateServiceAccessTokenArgs, error) {
+	if csat.ExpiresAt.Before(time.Now()) {
+		return service.CreateServiceAccessTokenArgs{}, fmt.Errorf("Invalid ExpiresAt value. The cannot be earlier than now")
+	}
+
+	return service.CreateServiceAccessTokenArgs{
+		UserID:    userID,
+		Name:      csat.Name,
+		ExpiresAt: csat.ExpiresAt.Sub(time.Now()),
+	}, nil
+}
+func toServiceAccessToken(st service.ServiceAccessToken) ServiceAccessToken {
+	return ServiceAccessToken{
+		ID:        strconv.FormatInt(st.ID, 10),
+		Name:      st.Name,
+		Token:     st.Token,
+		ExpiresAt: st.ExpiresAt.String(),
+		CreatedAt: st.IssuedAT.String(),
+	}
 }
