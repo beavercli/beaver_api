@@ -69,6 +69,13 @@ func (s *Service) ListServiceAccessTokens(ctx context.Context, userID int64, pag
 	}, nil
 }
 
+func (s *Service) DeleteServiceAccessToken(ctx context.Context, tokenID int64) error {
+	if err := s.db.DeleteServiceAccessTokenByID(ctx, tokenID); err != nil {
+		return err
+	}
+
+	return nil
+}
 func toServiceAccessTokenSum(sts []storage.ServiceAccessToken) []ServiceAccessTokenSum {
 	s := make([]ServiceAccessTokenSum, len(sts))
 	for i, st := range sts {

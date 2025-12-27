@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/beavercli/beaver_api/internal/service"
 )
@@ -84,14 +85,25 @@ func (s *server) handleGetServiceAccessTokens(w http.ResponseWriter, r *http.Req
 // @Summary		Revoke service access token
 // @Description	Revokes an existing service access token by ID.
 // @Tags			service-access-tokens
-// @Param			token_id	query	int	true	"Service access token ID"
+// @Param			ID path	int	true	"Service access token ID"
 // @Security		BearerAuth
 // @Success		204
 // @Failure		400	{object}	ErrorResponse
 // @Failure		401	{object}	ErrorResponse
 // @Failure		404	{object}	ErrorResponse
 // @Failure		500	{object}	ErrorResponse
-// @Router			/api/v1/service-access-tokens [delete]
+// @Router			/api/v1/service-access-tokens/{ID} [delete]
 func (s *server) handleDeleteServiceAccessToken(w http.ResponseWriter, r *http.Request) {
-	return
+	tokenID, err := strconv.ParseInt(r.PathValue("ID"), 10, 64)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := s.service.DeleteServiceAccessToken(r.Context(), tokenID); err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusCreated, nil)
 }
