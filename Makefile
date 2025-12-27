@@ -1,4 +1,4 @@
-.PHONY: help run build seed swagger sqlc migrate-up migrate-down migrate-create docker-up docker-down test
+.PHONY: help run build seed swagger sqlc migrate-up migrate-down migrate-create migrate-status docker-up docker-down test db-shell tools
 
 .DEFAULT_GOAL := help
 
@@ -58,6 +58,10 @@ docker-up:
 ## docker-down: Stop docker compose services
 docker-down:
 	docker compose down
+
+## db-shell: Open a psql shell to the Postgres container
+db-shell:
+	docker compose exec beaver_db psql -U beaver_api -d beaver_api
 
 ## test: Run all tests in verbose mode
 test:
