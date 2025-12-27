@@ -193,6 +193,15 @@ func (s *Service) AuthUser(ctx context.Context, tokenType TokenType, token strin
 	}
 }
 
+// TODO: Rewrite it to delete refresh token related to the issued access token
+// so in case user have serveral devices we logout them only from the device we got request from.
+func (s *Service) LogoutUser(ctx context.Context, userID int64) error {
+	if err := s.db.DeleteRefreshTokensByUserID(ctx, pgtype.Int8{Int64: userID, Valid: true}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Service) handleAccessToken(_ context.Context, token string) (int64, error) {
 	c, err := s.ParseJWT(token)
 	if err != nil {

@@ -300,6 +300,15 @@ func (q *Queries) DeleteRefreshTokenByID(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteRefreshTokensByUserID = `-- name: DeleteRefreshTokensByUserID :exec
+DELETE FROM refresh_tokens WHERE user_id = $1
+`
+
+func (q *Queries) DeleteRefreshTokensByUserID(ctx context.Context, userID pgtype.Int8) error {
+	_, err := q.db.Exec(ctx, deleteRefreshTokensByUserID, userID)
+	return err
+}
+
 const deleteServiceAccessTokenByID = `-- name: DeleteServiceAccessTokenByID :exec
 DELETE FROM service_access_tokens WHERE id = $1
 `

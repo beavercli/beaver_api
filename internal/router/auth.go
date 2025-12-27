@@ -87,7 +87,18 @@ func (s *server) handleTokenRotate(w http.ResponseWriter, r *http.Request) {
 // @Failure		500	{object}	ErrorResponse
 // @Router			/auth/logout [post]
 func (s *server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromCtx(r.Context())
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
+	if err := s.service.LogoutUser(r.Context(), userID); err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusNoContent, nil)
 }
 
 // @Summary		Get current user

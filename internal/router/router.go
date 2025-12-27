@@ -32,13 +32,13 @@ func New(cfg config.Server, service *service.Service) *http.Server {
 
 	mux.HandleFunc("POST /api/v1/service-access-tokens", s.authMiddleware(s.handleCreateServiceAccessToken))
 	mux.HandleFunc("GET /api/v1/service-access-tokens", s.authMiddleware(s.handleGetServiceAccessTokens))
-	mux.HandleFunc("DELETE /api/v1/service-access-tokens/{ID}", s.authMiddleware(s.handleDeleteServiceAccessToken)) // TODO
+	mux.HandleFunc("DELETE /api/v1/service-access-tokens/{ID}", s.authMiddleware(s.handleDeleteServiceAccessToken))
 
 	mux.HandleFunc("POST /auth/github/login", s.handleGithubLogin)
 	mux.HandleFunc("POST /auth/github/device/poll", s.handleGitHubDeviceStatus)
 	mux.HandleFunc("POST /auth/refresh", s.authMiddleware(s.handleTokenRotate))
 	mux.HandleFunc("POST /auth/logout", s.authMiddleware(s.handleLogout)) // TODO
-	mux.HandleFunc("GET /auth/me", s.authMiddleware(s.handleMe))          // TODO
+	// mux.HandleFunc("GET /auth/me", s.authMiddleware(s.handleMe))          // TODO
 
 	return &http.Server{
 		Addr:         cfg.Addr,
