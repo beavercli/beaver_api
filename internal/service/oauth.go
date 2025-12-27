@@ -225,7 +225,7 @@ func (s *Service) handleSessionToken(ctx context.Context, token string) (int64, 
 		return 0, err
 	}
 
-	t, err := s.db.GetRefreshTokenByHash(ctx, computeHash(token))
+	t, err := s.db.GetServiceAccessTokenByHash(ctx, computeHash(token))
 	if err != nil {
 		return 0, err
 	}
